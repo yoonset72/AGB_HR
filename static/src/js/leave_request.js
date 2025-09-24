@@ -336,10 +336,14 @@ class LeaveRequestForm {
 
                                     return `
                                         <div class="time-off-type" data-type-id="${type.id}" data-leave-name="${lowerName}">
-                                            <input type="radio" name="holiday_status_id" value="${type.id}" id="type_${type.id}">
-                                            <div class="time-off-type-name">${type.name}</div>
-                                            ${extraInfo}
+                                            <div class="time-off-type-header">
+                                                <input type="radio" name="holiday_status_id" value="${type.id}" id="type_${type.id}">
+                                                <div class="time-off-type-name">${type.name}</div>
+                                            </div>
                                             <span class="time-off-type-badge">${type.requires_allocation ? 'Allocated' : 'Unlimited'}</span>
+                                            <div class="leave-balance-info">
+                                                ${extraInfo}
+                                            </div>
                                         </div>
                                     `;
                                 }).join('')}
