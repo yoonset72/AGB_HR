@@ -3,8 +3,8 @@
     <data>
         <template id="attendance_dashboard_assets" inherit_id="website.assets_frontend">
             <xpath expr="." position="inside">
-                <link rel="stylesheet" type="text/css" href="/attendance_dashboard/static/src/css/attendance_dashboard.css"/>
-                <script type="text/javascript" src="/attendance_dashboard/static/src/js/attendance_dashboard.js"/>
+                <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
+                <script type="text/javascript" src="/AGB_HR/static/src/js/attendance_dashboard.js"/>
             </xpath>
         </template>
     </data>

@@ -41,7 +41,7 @@ class AttendanceDashboardController(http.Controller):
             login_record = request.env['employee.login'].sudo().search([('login_token', '=', token)], limit=1)
             if login_record:
                 employee_id = login_record.employee_number.id
-                request.session['employee_number'] = employee_id  # store in session for future web access
+                request.session['employee_number'] = employee_id
 
         # --- If no valid login, redirect to login page ---
         if not employee_id:
@@ -59,7 +59,7 @@ class AttendanceDashboardController(http.Controller):
 
         stats = self._calculate_stats(employee, attendances, start_date, end_date)
 
-        return request.render('attendance_dashboard.main_dashboard', {
+        return request.render('AGB_HR.main_dashboard', {
             'employee': employee,
             'stats': stats,
             'current_period': f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}",
@@ -70,7 +70,6 @@ class AttendanceDashboardController(http.Controller):
                 'email': 'hr@agbcommunication.com'
             }
         })
-
 
     # --- Calendar Route ---
     @http.route('/attendance/calendar', type='http', auth='public', website=True)
@@ -85,7 +84,7 @@ class AttendanceDashboardController(http.Controller):
 
         calendar_data = self._get_calendar_data(employee, year, month)
 
-        return request.render('attendance_dashboard.attendance_calendar', {
+        return request.render('AGB_HR.attendance_calendar', {
             'employee': employee,
             'calendar_data': calendar_data,
             'year': year,
@@ -94,45 +93,6 @@ class AttendanceDashboardController(http.Controller):
             'prev_month': self._get_prev_month(year, month),
             'next_month': self._get_next_month(year, month),
         })
-
-    # --- Absent Route ---
-    @http.route('/attendance/absent', type='http', auth='public', website=True)
-    def absent_details(self, **kwargs):
-        employee = self._get_employee()
-        if not employee:
-            return request.redirect('/employee/register')
-
-        absent_days = self._get_absent_days(employee)
-        return request.render('attendance_dashboard.absent_details', {
-            'employee': employee,
-            'absent_days': absent_days,
-            'total_absent': len(absent_days),
-            'current_period': f"{self._get_fiscal_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
-        })
-
-    # --- Late Route ---
-    @http.route('/attendance/late', type='http', auth='public', website=True)
-    def late_details(self, **kwargs):
-        employee = self._get_employee()
-        if not employee:
-            return request.redirect('/employee/register')
-
-        late_days, total_late_minutes, avg_lateness = self._get_late_days(employee)
-
-        return request.render('attendance_dashboard.late_details', {
-            'employee': employee,
-            'late_days': late_days,
-            'total_late_days': len(late_days),
-            'total_late_minutes': total_late_minutes,
-            'avg_lateness': avg_lateness,
-            'current_period': f"{self._get_fiscal_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
-        })
-
-    # --- Logout Route ---
-    @http.route('/attendance/logout', type='http', auth='public', website=True)
-    def attendance_logout(self, **kwargs):
-        request.session.pop('employee_number', None)
-        return request.redirect('/employee/register')
 
     # --- Helper Methods ---
     def _get_employee(self):
@@ -146,10 +106,7 @@ class AttendanceDashboardController(http.Controller):
         return employee
 
     def _calculate_stats(self, employee, attendances, start_date, end_date):
-        """
-        Calculate attendance statistics for the given employee and date range.
-        Handles multi-month periods and filters days strictly within the range.
-        """
+        """Calculate attendance statistics for the given employee and date range."""
         calendar_data = {}
 
         # Iterate over all months in the range
@@ -190,25 +147,30 @@ class AttendanceDashboardController(http.Controller):
             'total_days': total_days,
         }
 
-
-
     def _get_calendar_data(self, employee, year, month):
+        """FIXED: Enhanced calendar data with proper half-day leave detection"""
         calendar_data = {}
         _, num_days = calendar.monthrange(year, month)
         today_date = self._now_myanmar().date()
 
         # Prepare shift names safely
-        if employee.resource_calendar_ids:
-            # Combine multiple calendars into a comma-separated string
-            shift_name = ', '.join(employee.resource_calendar_ids.mapped('name'))
-        else:
-            shift_name = 'Standard Shift (9:00 AM - 6:00 PM)'
+        shift_name = ', '.join(employee.resource_calendar_ids.mapped('name')) if employee.resource_calendar_ids else 'Standard Shift (9:00 AM - 6:00 PM)'
+
+        # --- Fetch leaves overlapping this month ---
+        month_start = datetime(year, month, 1, 0, 0, 0)
+        month_end = datetime(year, month, num_days, 23, 59, 59)
+        leaves = request.env['hr.leave'].sudo().search([
+            ('employee_id', '=', employee.id),
+            ('request_date_from', '<=', month_end),
+            ('request_date_to', '>=', month_start),
+            ('state', 'in', ['confirm', 'validate', 'validate1']) 
+        ])
 
         for day in range(1, num_days + 1):
             current_date = date(year, month, day)
             weekday = current_date.weekday()
 
-            # Fetch attendance for the day (check_in or check_out)
+            # --- Attendance ---
             day_att = request.env['hr.attendance'].sudo().search([
                 ('employee_id', '=', employee.id),
                 '|',
@@ -218,11 +180,8 @@ class AttendanceDashboardController(http.Controller):
 
             check_in = day_att.check_in.astimezone(MYANMAR_TZ) if day_att and day_att.check_in else None
             check_out = day_att.check_out.astimezone(MYANMAR_TZ) if day_att and day_att.check_out else None
-
-            # Calculate working hours
             working_hours = (check_out - check_in).total_seconds() / 3600 if check_in and check_out else 0
 
-            # Determine attendance fraction
             if check_in and check_out:
                 attendance_fraction = 0.5 if working_hours < 5 else 1.0
             elif check_in or check_out:
@@ -230,9 +189,23 @@ class AttendanceDashboardController(http.Controller):
             else:
                 attendance_fraction = 0.0
 
-            # Determine status
+            # --- Check for leave on this day ---
+            day_leaves = leaves.filtered(lambda l: l.request_date_from <= current_date <= l.request_date_to)
+            has_leave = bool(day_leaves)
+            
+            # FIXED: Determine if it's half-day leave
+            is_half_leave = False
+            if has_leave and attendance_fraction > 0:
+                # If there's both leave and attendance, it's a half-day leave
+                is_half_leave = True
+
+            # --- Status determination ---
             if weekday >= 5:
                 status = 'weekend'
+            elif has_leave and not is_half_leave:
+                status = 'leave'  # Full day leave
+            elif is_half_leave:
+                status = 'half_leave'  # Half day leave
             elif attendance_fraction == 1.0:
                 status = 'present'
             elif attendance_fraction == 0.5:
@@ -240,7 +213,7 @@ class AttendanceDashboardController(http.Controller):
             else:
                 status = 'absent'
 
-            # Late calculation
+            # --- Late calculation ---
             late_minutes, is_late, severity = 0, False, None
             if day_att and getattr(day_att, 'display_late_minutes', "00:00") != "00:00":
                 display_late = day_att.display_late_minutes
@@ -258,7 +231,7 @@ class AttendanceDashboardController(http.Controller):
                 except:
                     pass
 
-            # Populate calendar data
+            # --- Base calendar info ---
             calendar_data[day] = {
                 'date': current_date,
                 'day': day,
@@ -275,11 +248,27 @@ class AttendanceDashboardController(http.Controller):
                 'has_check_out': bool(check_out),
                 'attendance_fraction': attendance_fraction,
                 'status': status,
-                'shift_name': shift_name
+                'shift_name': shift_name,
+                # FIXED: Added proper leave and half-leave detection
+                'leave': has_leave,
+                'is_half_leave': is_half_leave,
+                'has_attendance': bool(day_att),  # New field to indicate if there's attendance data
             }
 
-        return calendar_data
+            # --- Add leave info if exists ---
+            if day_leaves:
+                leave = day_leaves[0]  # show first leave if multiple
+                calendar_data[day].update({
+                    'leave_name': leave.holiday_status_id.name,
+                    'leave_state': leave.state,
+                    'reason': leave.name or '',
+                    'first_approver': leave.first_approver_id.name if leave.first_approver_id else '',
+                    'second_approver': ', '.join(leave.second_approver_ids.mapped('name')) if leave.second_approver_ids else '',
+                    'from_date': leave.request_date_from,
+                    'to_date': leave.request_date_to,
+                })
 
+        return calendar_data
 
     def _get_prev_month(self, year, month):
         if month == 1:
@@ -362,7 +351,6 @@ class AttendanceDashboardController(http.Controller):
 
         return absent_days
 
-
     def _get_late_days(self, employee):
         start_date, end_date = self._get_fiscal_period()
 
@@ -409,3 +397,40 @@ class AttendanceDashboardController(http.Controller):
 
         avg_lateness = total_late_minutes / len(late_days) if late_days else 0
         return late_days, total_late_minutes, avg_lateness
+
+    # --- Other routes (absent, late, logout) remain the same ---
+    @http.route('/attendance/absent', type='http', auth='public', website=True)
+    def absent_details(self, **kwargs):
+        employee = self._get_employee()
+        if not employee:
+            return request.redirect('/employee/register')
+
+        absent_days = self._get_absent_days(employee)
+        return request.render('AGB_HR.absent_details', {
+            'employee': employee,
+            'absent_days': absent_days,
+            'total_absent': len(absent_days),
+            'current_period': f"{self._get_fiscal_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
+        })
+
+    @http.route('/attendance/late', type='http', auth='public', website=True)
+    def late_details(self, **kwargs):
+        employee = self._get_employee()
+        if not employee:
+            return request.redirect('/employee/register')
+
+        late_days, total_late_minutes, avg_lateness = self._get_late_days(employee)
+
+        return request.render('AGB_HR.late_details', {
+            'employee': employee,
+            'late_days': late_days,
+            'total_late_days': len(late_days),
+            'total_late_minutes': total_late_minutes,
+            'avg_lateness': avg_lateness,
+            'current_period': f"{self._get_fiscal_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
+        })
+
+    @http.route('/attendance/logout', type='http', auth='public', website=True)
+    def attendance_logout(self, **kwargs):
+        request.session.pop('employee_number', None)
+        return request.redirect('/employee/register')

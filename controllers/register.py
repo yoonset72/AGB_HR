@@ -25,7 +25,7 @@ class EmployeePortal(http.Controller):
             employee = request.env['hr.employee'].sudo().search(
                 [('employee_number', '=', emp_id)], limit=1)
             if not employee:
-                return request.render('attendance_dashboard.register_template', {
+                return request.render('AGB_HR.register_template', {
                     'error': 'Employee ID not found.',
                     'employee_number': emp_id,
                     'forgot': False,
@@ -42,13 +42,13 @@ class EmployeePortal(http.Controller):
 
             if forgot:  # reset password
                 if not new_password:
-                    return request.render('attendance_dashboard.register_template', {
+                    return request.render('AGB_HR.register_template', {
                         'error': 'Please enter a new password.',
                         'employee_number': emp_id,
                         'forgot': True
                     })
                 login_rec.sudo().write({'password': new_password})
-                return request.render('attendance_dashboard.register_template', {
+                return request.render('AGB_HR.register_template', {
                     'success': 'Password updated successfully. Please log in again.',
                     'employee_number': emp_id,
                     'forgot': False
@@ -68,14 +68,14 @@ class EmployeePortal(http.Controller):
                     return request.redirect('/attendance/dashboard')
 
             else:
-                return request.render('attendance_dashboard.register_template', {
+                return request.render('AGB_HR.register_template', {
                     'error': 'Wrong password.',
                     'employee_number': emp_id,
                     'forgot': False
                 })
 
         # GET request
-        return request.render('attendance_dashboard.register_template', {
+        return request.render('AGB_HR.register_template', {
             'employee_number': kwargs.get('employee_number', ''),
             'forgot': kwargs.get('forgot', '').lower() in ['1', 'true', 'yes'],
         })

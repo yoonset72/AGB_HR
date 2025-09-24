@@ -1,0 +1,364 @@
+/* Leave Balance Page Styles - Updated Grid Design */
+
+/* Base styles inherited from attendance_dashboard.css */
+
+/* Leave Balance Specific Styles */
+.agb-employee-info {
+    background: linear-gradient(135deg, #f0f9ff, #ecfdf5);
+    border-left: 4px solid #10b981;
+    margin-bottom: 32px;
+}
+
+.agb-employee-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.agb-detail-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.agb-detail-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+}
+
+.agb-detail-value {
+    font-weight: 700;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+/* Updated Balance Grid */
+.agb-balance-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 24px;
+    margin-bottom: 32px;
+    padding: 0 16px;
+}
+
+/* Updated Balance Card */
+.agb-balance-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    border: 2px solid transparent;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.agb-balance-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+/* Leave type specific border colors */
+.agb-balance-card.agb-balance-annual {
+    border-color: #f59e0b;
+}
+
+.agb-balance-card.agb-balance-sick {
+    border-color: #ef4444;
+}
+
+.agb-balance-card.agb-balance-casual {
+    border-color: #10b981;
+}
+
+.agb-balance-card.agb-balance-maternity {
+    border-color: #8b5cf6;
+}
+
+.agb-balance-card.agb-balance-medical {
+    border-color: #ef4444;
+}
+
+.agb-balance-card.agb-balance-funeral {
+    border-color: #6b7280;
+}
+
+.agb-balance-card.agb-balance-marriage {
+    border-color: #ec4899;
+}
+
+.agb-balance-card.agb-balance-unpaid {
+    border-color: #f59e0b;
+}
+
+.agb-balance-card.agb-balance-paternity {
+    border-color: #3b82f6;
+}
+
+/* Card Header */
+.agb-balance-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.agb-balance-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.agb-balance-total-badge {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 14px;
+}
+
+.agb-total-label {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.agb-total-value {
+    color: #1f2937;
+    font-weight: 700;
+    margin-left: 4px;
+}
+
+/* Metrics Grid - 3 columns */
+.agb-balance-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+/* Metric Boxes */
+.agb-metric-box {
+    text-align: center;
+    padding: 16px 12px;
+    border-radius: 12px;
+    border: 1px solid;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.agb-metric-box:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Taken Metric */
+.agb-metric-taken {
+    background-color: #dcfce7;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.agb-metric-taken .agb-metric-value {
+    color: #15803d;
+}
+
+/* Balance Metric */
+.agb-metric-balance {
+    background-color: #dbeafe;
+    border-color: #bfdbfe;
+    color: #1e40af;
+}
+
+.agb-metric-balance .agb-metric-value {
+    color: #1d4ed8;
+}
+
+/* Pending Metric */
+.agb-metric-pending {
+    background-color: #fef3c7;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.agb-metric-pending .agb-metric-value {
+    color: #d97706;
+}
+
+/* Metric Values and Labels */
+.agb-metric-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.agb-metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+}
+
+/* Legend Styles */
+.agb-balance-legend {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    border-left: 4px solid #3b82f6;
+    margin-top: 32px;
+}
+
+.agb-legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.agb-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+}
+
+.agb-legend-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.agb-dot-taken {
+    background-color: #15803d;
+}
+
+.agb-dot-balance {
+    background-color: #1d4ed8;
+}
+
+.agb-dot-pending {
+    background-color: #d97706;
+}
+
+/* Loading States */
+.agb-loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.agb-loading-spinner {
+    font-size: 32px;
+    color: #3b82f6;
+    margin-bottom: 16px;
+}
+
+.agb-loading-text {
+    color: #6b7280;
+    font-size: 16px;
+    margin: 0;
+}
+
+.agb-loading-card {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    background: white;
+    border-radius: 16px;
+    border: 2px dashed #d1d5db;
+}
+
+.agb-loading-card i {
+    font-size: 48px;
+    color: #9ca3af;
+    margin-bottom: 16px;
+}
+
+.agb-loading-card p {
+    color: #6b7280;
+    font-size: 16px;
+    margin: 0;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .agb-balance-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 0 8px;
+    }
+    
+    .agb-balance-card {
+        padding: 16px;
+    }
+    
+    .agb-balance-metrics-grid {
+        gap: 8px;
+    }
+    
+    .agb-metric-box {
+        padding: 12px 8px;
+    }
+    
+    .agb-metric-value {
+        font-size: 24px;
+    }
+    
+    .agb-balance-title {
+        font-size: 16px;
+    }
+    
+    .agb-employee-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .agb-legend-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .agb-balance-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .agb-balance-total-badge {
+        align-self: flex-end;
+    }
+}

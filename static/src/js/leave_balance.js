@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Load leave balances from API
 async function loadLeaveBalances() {
     try {
         showLoading(true);
@@ -40,19 +39,15 @@ async function loadLeaveBalances() {
         });
 
         const data = await response.json();
-        console.log('Leave balance API response:', data);
+        const result = data.result || {}; 
 
-        // Handle JSON-RPC response structure
-        let responseData = data;
-        if (data.result) {
-            responseData = data.result;
-        }
-        
-        if (responseData.success) {
-            leaveBalanceData = responseData;
-            renderLeaveBalances(responseData);
+        console.log('Leave balance API response:', result);
+
+        if (result.success) {
+            leaveBalanceData = result;
+            renderLeaveBalances(result);
         } else {
-            throw new Error(responseData.error || 'Failed to load leave balances');
+            throw new Error(result.error || 'Failed to load leave balances');
         }
 
     } catch (error) {
@@ -77,13 +72,13 @@ function renderLeaveBalances(data) {
     // Define leave types with their display information
     const leaveTypes = [
         { key: 'annual', name: 'Annual Leave', icon: 'fa-calendar-check', class: 'annual' },
+        { key: 'sick', name: 'Sick Leave', icon: 'fa-user-md', class: 'sick' },
         { key: 'casual', name: 'Casual Leave', icon: 'fa-coffee', class: 'casual' },
+        { key: 'maternity', name: 'Maternity Leave', icon: 'fa-female', class: 'maternity' },
         { key: 'medical', name: 'Medical Leave', icon: 'fa-medkit', class: 'medical' },
         { key: 'funeral', name: 'Funeral Leave', icon: 'fa-heart', class: 'funeral' },
         { key: 'marriage', name: 'Marriage Leave', icon: 'fa-heart-o', class: 'marriage' },
         { key: 'unpaid', name: 'Unpaid Leave', icon: 'fa-clock-o', class: 'unpaid' },
-        { key: 'sick', name: 'Sick Leave', icon: 'fa-user-md', class: 'sick' },
-        { key: 'maternity', name: 'Maternity Leave', icon: 'fa-female', class: 'maternity' },
         { key: 'paternity', name: 'Paternity Leave', icon: 'fa-male', class: 'paternity' }
     ];
 
@@ -165,9 +160,9 @@ function addCardInteractions(card, leaveType, leaveData) {
     });
 
     // Add click handler for detailed view
-    card.addEventListener('click', function() {
-        showLeaveDetail(leaveType, leaveData);
-    });
+    // card.addEventListener('click', function() {
+    //     showLeaveDetail(leaveType, leaveData);
+    // });
 
     // Add keyboard navigation
     card.setAttribute('tabindex', '0');

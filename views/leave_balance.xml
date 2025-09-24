@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Leave Balance Page Template -->
+    <template id="leave_balance_page" name="Leave Balance">
+        <head>
+            <title>Leave Balance - AGB Communication</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
+            <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
+            <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/leave_balance.css"/>
+            <script type="text/javascript" src="/AGB_HR/static/src/js/leave_balance.js" defer="defer"/>
+        </head>
+        <body>
+            <div class="agb-app-container">
+                <!-- Sticky Top Navigation -->
+                <div class="agb-top-nav agb-sticky-header">
+                    <h1 class="agb-nav-title">Leave Balance Overview</h1>
+                    <div class="agb-nav-actions">
+                        <button class="agb-btn agb-btn-link" onclick="window.location.href='/attendance/dashboard'">
+                            <i class="fa fa-arrow-left"></i> Dashboard
+                        </button>
+                        <a href="/attendance/logout" class="agb-btn agb-btn-link">
+                            <i class="fa fa-sign-out"></i> Logout
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Main Content Wrapper -->
+                <div class="agb-main-content-wrapper">
+                    <div class="agb-dashboard-content">
+                        
+                        <!-- Employee Info Card -->
+                        <div class="agb-form-card agb-employee-info">
+                            <div class="agb-form-header">
+                                <i class="fa fa-user"></i>
+                                <h3><t t-esc="employee.name"/>'s Leave Balance</h3>
+                            </div>
+                            <div class="agb-employee-details">
+                                <div class="agb-detail-item">
+                                    <span class="agb-detail-label">Employee ID:</span>
+                                    <span class="agb-detail-value"><t t-esc="employee.employee_number or 'Not Set'"/></span>
+                                </div>
+                                <div class="agb-detail-item">
+                                    <span class="agb-detail-label">Department:</span>
+                                    <span class="agb-detail-value"><t t-esc="employee.department_id.name or 'No Department'"/></span>
+                                </div>
+                                <div class="agb-detail-item">
+                                    <span class="agb-detail-label">Year:</span>
+                                    <span class="agb-detail-value"><t t-esc="current_year"/></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Balance Grid Container -->
+                        <div id="leave-balance-grid" class="agb-balance-grid">
+                            <!-- Cards will be dynamically populated by JavaScript -->
+                            <t t-if="leave_balances">
+                                <t t-foreach="leave_balances" t-as="bal">
+                                    <div t-attf-class="agb-balance-card agb-balance-#{bal['type_class']}">
+                                        <!-- Card Header with Leave Type and Total -->
+                                        <div class="agb-balance-card-header">
+                                            <div class="agb-balance-title-section">
+                                                <h3 class="agb-balance-title"><t t-esc="bal['type']"/></h3>
+                                            </div>
+                                            <div class="agb-balance-total-badge">
+                                                <span class="agb-total-label">Total:</span>
+                                                <span class="agb-total-value"><t t-esc="bal['total']"/></span>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Metrics Grid -->
+                                        <div class="agb-balance-metrics-grid">
+                                            <div class="agb-metric-box agb-metric-taken">
+                                                <div class="agb-metric-value"><t t-esc="bal['taken']"/></div>
+                                                <div class="agb-metric-label">Taken</div>
+                                            </div>
+                                            <div class="agb-metric-box agb-metric-balance">
+                                                <div class="agb-metric-value"><t t-esc="bal['balance']"/></div>
+                                                <div class="agb-metric-label">Balance</div>
+                                            </div>
+                                            <div class="agb-metric-box agb-metric-pending">
+                                                <div class="agb-metric-value"><t t-esc="bal['pending']"/></div>
+                                                <div class="agb-metric-label">Pending</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </t>
+                            </t>
+                            <t t-else="">
+                                <div class="agb-loading-card">
+                                    <i class="fa fa-info-circle"></i>
+                                    <p>No leave data found.</p>
+                                </div>
+                            </t>
+                        </div>
+
+
+                        <!-- Legend -->
+                        <div class="agb-form-card agb-balance-legend">
+                            <div class="agb-form-header">
+                                <i class="fa fa-info-circle"></i>
+                                <h3>Legend</h3>
+                            </div>
+                            <div class="agb-legend-grid">
+                                <div class="agb-legend-item">
+                                    <div class="agb-legend-dot agb-dot-total"></div>
+                                    <span>Total Allocation</span>
+                                </div>
+                                <div class="agb-legend-item">
+                                    <div class="agb-legend-dot agb-dot-taken"></div>
+                                    <span>Taken/Used</span>
+                                </div>
+                                <div class="agb-legend-item">
+                                    <div class="agb-legend-dot agb-dot-balance"></div>
+                                    <span>Available Balance</span>
+                                </div>
+                                <div class="agb-legend-item">
+                                    <div class="agb-legend-dot agb-dot-pending"></div>
+                                    <span>Pending Requests</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sticky Footer -->
+                <div class="agb-footer agb-sticky-footer">
+                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
+                    <p>Secure Employee Portal • Leave Management System</p>
+                </div>
+            </div>
+
+            <!-- Hidden employee data for JavaScript -->
+            <script type="text/javascript">
+                window.employeeData = {
+                    employee_number: '<t t-esc="employee.id"/>',
+                    employee_name: '<t t-esc="employee.name"/>',
+                    current_year: '<t t-esc="current_year"/>'
+                };
+            </script>
+
+            <!-- Notification Container -->
+            <div id="notification-container" class="agb-notification-container"></div>
+        </body>
+    </template>
+
+    <!-- Updated Main Dashboard Template -->
+    <template id="main_dashboard_updated" name="Attendance Dashboard - Updated Leave Card">
+        <head>
+            <title>AGB Communication - Attendance Dashboard</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
+            <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
+            <script type="text/javascript" src="/AGB_HR/static/src/js/attendance_dashboard.js" defer="defer"/>
+        </head>
+        <body>
+            <div class="agb-app-container">
+                <!-- Sticky Top Navigation -->
+                <div class="agb-top-nav agb-sticky-header">
+                    <h1 class="agb-nav-title">Attendance Dashboard</h1>
+                    <div class="agb-nav-actions flex items-center gap-2">
+                        <!-- Welcome message with waving hand -->
+                        <span class="agb-nav-welcome flex items-center gap-2">
+                            <span>Welcome, <t t-esc="employee.name"/>!</span>
+                            <span class="text-2xl animate-wave">👋</span>
+                        </span>      
+                        <a href="/attendance/logout" class="agb-btn agb-btn-link">
+                            <i class="fa fa-sign-out"></i> Logout
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Main Content Wrapper -->
+                <div class="agb-main-content-wrapper">
+                    <div class="agb-dashboard-content">
+                        <!-- Stats Cards -->
+                        <div class="agb-stats-grid">
+                            <!-- Attendance Card -->
+                            <div class="agb-form-card agb-stat-card agb-stat-attendance">
+                                <div class="agb-stat-icon">
+                                    <i class="fa fa-check-circle"></i>
+                                </div>
+                                <div class="agb-stat-content">
+                                    <h3>Attendance</h3>
+                                    <div class="agb-stat-number"><t t-esc="stats['attendanceCount']"/></div>
+                                    <p class="agb-stat-details">
+                                        Present: <t t-esc="stats['attendanceCount']"/> | 
+                                        <a t-attf-href="/attendance/late" class="agb-stat-link agb-stat-link-orange">Late: <t t-esc="stats['lateCount']"/></a> | 
+                                        <a t-attf-href="/attendance/absent" class="agb-stat-link agb-stat-link-red">Absent: <t t-esc="stats['absentCount']"/></a>
+                                    </p>
+                                </div>
+                                <div class="agb-stat-action">
+                                    <button class="agb-btn agb-btn-link" onclick="window.location.href='/attendance/calendar'">
+                                        <i class="fa fa-calendar"></i> Calendar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Updated Leave Card -->
+                            <div class="agb-form-card agb-stat-card agb-stat-leave">
+                                <div class="agb-stat-icon">
+                                    <i class="fa-solid fa-file-signature"></i>
+                                </div>
+                                <div class="agb-stat-content">
+                                    <h3>Your Leaves</h3>
+                                    <div class="agb-stat-number">
+                                        <i class="fa fa-leaf"></i>
+                                    </div>
+                                    <p class="agb-stat-details">View your leave allocations and balances</p>
+                                </div>
+                                <div class="agb-stat-action">
+                                    <button class="agb-btn agb-btn-link" onclick="window.location.href='/leave/balance'">
+                                        <i class="fa fa-balance-scale"></i> Balance
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Info -->
+                        <div class="agb-form-card">
+                            <div class="agb-quick-info">
+                                <div class="agb-form-header">
+                                    <i class="fa fa-info-circle"></i>
+                                    <h3>Quick Information</h3>
+                                </div>
+                                <div class="agb-info-grid">
+                                    <div class="agb-info-item">
+                                        <i class="fa fa-credit-card"></i> 
+                                        <span>Employee ID: <strong><t t-esc="employee.employee_number or 'Not Set'"/></strong></span>
+                                    </div>
+                                    <div class="agb-info-item">
+                                        <i class="fa fa-building"></i> 
+                                        <span>Department: <strong><t t-esc="employee.department_id.name or 'No Department'"/></strong></span>
+                                    </div>
+                                    <div class="agb-info-item">
+                                        <i class="fa fa-briefcase"></i> 
+                                        <span>Job Position: <strong><t t-esc="employee.job_title or 'No Position'"/></strong></span>
+                                    </div>
+                                    <div class="agb-info-item">
+                                        <i class="fa fa-clock-o"></i> 
+                                        <span>Working Schedule: <strong><t t-esc="', '.join(employee.resource_calendar_ids.mapped('name')) or 'Standard Schedule (9:00 AM - 6:00 PM)'"/>
+</strong></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sticky Footer -->
+                <div class="agb-footer agb-sticky-footer">
+                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
+                    <p>Secure Employee Portal • Attendance System v1.0</p>
+                </div>
+            </div>
+
+            <!-- Notification Container -->
+            <div id="notification-container" class="agb-notification-container"></div>
+        </body>
+    </template>
+</odoo>

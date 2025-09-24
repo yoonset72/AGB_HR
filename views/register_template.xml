@@ -3,15 +3,15 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>    
-    <link rel="stylesheet" type="text/css" href="/attendance_dashboard/static/src/css/register.css"/>
-    <script type="text/javascript" src="/attendance_dashboard/static/src/js/register.js"/>
+    <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/register.css"/>
+    <script type="text/javascript" src="/AGB_HR/static/src/js/register.js"/>
   </head>
     <body>
       <div class="agb-container">
         <!-- Company Header -->
         <div class="agb-header">
           <div class="agb-logo">
-            <img src="/attendance_dashboard/static/src/img/logo.png" alt="AGB Communication Logo" class="agb-logo-img"/>
+            <img src="/AGB_HR/static/src/img/logo.png" alt="AGB Communication Logo" class="agb-logo-img"/>
           </div>
           <h1 class="agb-company-name">AGB Communication</h1>
           <p class="agb-company-subtitle">Myanmar • Employee Portal</p>
