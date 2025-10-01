@@ -72,13 +72,12 @@ function renderLeaveBalances(data) {
     // Define leave types with their display information
     const leaveTypes = [
         { key: 'annual', name: 'Annual Leave', icon: 'fa-calendar-check', class: 'annual' },
-        { key: 'sick', name: 'Sick Leave', icon: 'fa-user-md', class: 'sick' },
         { key: 'casual', name: 'Casual Leave', icon: 'fa-coffee', class: 'casual' },
         { key: 'maternity', name: 'Maternity Leave', icon: 'fa-female', class: 'maternity' },
         { key: 'medical', name: 'Medical Leave', icon: 'fa-medkit', class: 'medical' },
-        { key: 'funeral', name: 'Funeral Leave', icon: 'fa-heart', class: 'funeral' },
-        { key: 'marriage', name: 'Marriage Leave', icon: 'fa-heart-o', class: 'marriage' },
-        { key: 'unpaid', name: 'Unpaid Leave', icon: 'fa-clock-o', class: 'unpaid' },
+        { key: 'funeral', name: 'Funeral Leave', icon: 'fa-face-sad-tear', class: 'funeral' },
+        { key: 'marriage', name: 'Married Leave', icon: 'fa-heart', class: 'marriage' },
+        { key: 'unpaid', name: 'Unpaid Leave', icon: 'fa-clock', class: 'unpaid' },
         { key: 'paternity', name: 'Paternity Leave', icon: 'fa-male', class: 'paternity' }
     ];
 
@@ -118,6 +117,7 @@ function createBalanceCard(leaveType, leaveData, index) {
     card.innerHTML = `
         <div class="agb-balance-card-header">
             <div class="agb-balance-title-section">
+                <i class="fa ${leaveType.icon} agb-balance-icon"></i>
                 <h3 class="agb-balance-title">${leaveType.name}</h3>
             </div>
             <div class="agb-balance-total-badge">
@@ -186,7 +186,7 @@ function showLeaveDetail(leaveType, leaveData) {
 // Utility function to format numbers
 function formatNumber(num) {
     if (num === null || num === undefined) return '0';
-    return parseInt(num).toString();
+    return parseFloat(num).toString();
 }
 
 // Show loading state

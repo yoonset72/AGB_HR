@@ -108,10 +108,24 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
     margin-bottom: 20px;
     padding-bottom: 12px;
     border-bottom: 1px solid #f3f4f6;
 }
+
+.agb-balance-title-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Icon style */
+.agb-balance-icon {
+    font-size: 18px;
+    color: #1e40af;
+}
+
 
 .agb-balance-title {
     font-size: 18px;
@@ -126,6 +140,7 @@
     border-radius: 8px;
     padding: 6px 12px;
     font-size: 14px;
+    white-space: nowrap;
 }
 
 .agb-total-label {
@@ -353,12 +368,16 @@
 
 @media (max-width: 480px) {
     .agb-balance-card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 8px;
+        flex-direction: row; /* keep row */
+        align-items: center;
+        justify-content: space-between;
     }
     
-    .agb-balance-total-badge {
-        align-self: flex-end;
+    .agb-balance-title {
+        font-size: 16px;
+    }
+    
+    .agb-balance-icon {
+        font-size: 16px;
     }
 }

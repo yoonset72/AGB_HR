@@ -17,23 +17,34 @@ class AttendanceDashboardController(http.Controller):
         """Return current datetime in Myanmar timezone"""
         return datetime.now(pytz.utc).astimezone(MYANMAR_TZ)
 
-    def _get_25th_to_25th_period(self):
-        """Return start_date and end_date from 25th of previous month to 25th of current month."""
+    def _get_26th_to_25th_period(self):
+        """Return start_date and end_date from 26th of previous month to 25th of current month."""
         now = self._now_myanmar()
-        if now.day >= 25:
-            start_date = now.replace(day=25, hour=0, minute=0, second=0, microsecond=0)
-            # end date is 25th next month
+
+        if now.day >= 26:
+            # Start date = 26th of current month
+            start_date = now.replace(day=26, hour=0, minute=0, second=0, microsecond=0)
+
+            # End date = 25th of next month
             if now.month == 12:
-                end_date = now.replace(year=now.year + 1, month=1, day=25, hour=23, minute=59, second=59)
+                end_date = now.replace(year=now.year + 1, month=1, day=25,
+                                    hour=23, minute=59, second=59)
             else:
-                end_date = now.replace(month=now.month + 1, day=25, hour=23, minute=59, second=59)
+                end_date = now.replace(month=now.month + 1, day=25,
+                                    hour=23, minute=59, second=59)
+
         else:
-            # start date is 25th previous month
+            # Start date = 26th of previous month
             if now.month == 1:
-                start_date = now.replace(year=now.year - 1, month=12, day=25, hour=0, minute=0, second=0)
+                start_date = now.replace(year=now.year - 1, month=12, day=26,
+                                        hour=0, minute=0, second=0, microsecond=0)
             else:
-                start_date = now.replace(month=now.month - 1, day=25, hour=0, minute=0, second=0)
+                start_date = now.replace(month=now.month - 1, day=26,
+                                        hour=0, minute=0, second=0, microsecond=0)
+
+            # End date = 25th of current month
             end_date = now.replace(day=25, hour=23, minute=59, second=59)
+
         return start_date, end_date
 
 
@@ -58,7 +69,7 @@ class AttendanceDashboardController(http.Controller):
         employee = request.env['hr.employee'].sudo().browse(employee_id)
 
         # --- 25th-to-25th period ---
-        start_date, end_date = self._get_25th_to_25th_period()
+        start_date, end_date = self._get_26th_to_25th_period()
 
         # --- Attendance records ---
         attendances = request.env['hr.attendance'].sudo().search([
@@ -424,7 +435,7 @@ class AttendanceDashboardController(http.Controller):
     
     
     def _get_absent_days(self, employee):
-        start_date, end_date = self._get_25th_to_25th_period()
+        start_date, end_date = self._get_26th_to_25th_period()
         today = self._now_myanmar().date()
 
         attendances = request.env['hr.attendance'].sudo().search([
@@ -527,7 +538,7 @@ class AttendanceDashboardController(http.Controller):
 
 
     def _get_late_days(self, employee):
-        start_date, end_date = self._get_25th_to_25th_period()
+        start_date, end_date = self._get_26th_to_25th_period()
 
         attendances = request.env['hr.attendance'].sudo().search([
             ('employee_id', '=', employee.id),
@@ -585,7 +596,7 @@ class AttendanceDashboardController(http.Controller):
             'employee': employee,
             'absent_days': absent_days,
             'total_absent': len(absent_days),
-            'current_period': f"{self._get_25th_to_25th_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
+            'current_period': f"{self._get_26th_to_25th_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
         })
 
     @http.route('/attendance/late', type='http', auth='public', website=True)
@@ -602,7 +613,7 @@ class AttendanceDashboardController(http.Controller):
             'total_late_days': len(late_days),
             'total_late_minutes': total_late_minutes,
             'avg_lateness': avg_lateness,
-            'current_period': f"{self._get_fiscal_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
+            'current_period': f"{self._get_26th_to_25th_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
         })
 
     @http.route('/attendance/logout', type='http', auth='public', website=True)

@@ -712,7 +712,7 @@ class LeaveController(http.Controller):
 
     def _get_system_start_date(self):
         """Define when your system started tracking leaves in hr_leave"""
-        return date(2025, 9, 26)  # Updated to match requirements
+        return date(2025, 10, 10)  # Updated to match requirements
 
     def _get_permanent_date(self, employee):
         """Get employee's permanent date"""
@@ -943,8 +943,33 @@ class LeaveController(http.Controller):
                 }
 
         else:
-            # For all other leave types, also recalc from hr.leave instead of trusting tracker
-            total_taken = self._get_actual_taken_leaves(employee.id, record.leave_type_name, current_year)
+            # For all other leave types, also recalc including historical + actual
+            system_start = self._get_system_start_date()
+            record_create_date = record.create_date.date() if record.create_date else None
+            is_historical = self._is_historical_data(current_year, record_create_date)
+
+            if is_historical:
+                # Combine historical + actual
+                if hasattr(record, "imported_taken") and record.imported_taken is not None:
+                    base_taken = record.imported_taken
+                else:
+                    base_domain = [
+                        ('employee_id', '=', employee.id),
+                        ('holiday_status_id.name', 'ilike', record.leave_type_name),
+                        ('state', '=', 'validate'),
+                        ('request_date_to', '<', system_start),
+                    ]
+                    base_leaves = request.env['hr.leave'].sudo().search(base_domain)
+                    base_taken = sum(base_leaves.mapped('number_of_days')) or 0.0
+
+                new_taken = self._get_taken_leaves_after_date(
+                    employee.id, record.leave_type_name, current_year, system_start
+                ) or 0.0
+
+                total_taken = base_taken + new_taken
+            else:
+                total_taken = self._get_actual_taken_leaves(employee.id, record.leave_type_name, current_year)
+
             pending = self._get_actual_pending_leaves(employee.id, record.leave_type_name, current_year)
             total_allocation = record.total_allocation or 0.0
             available = max(total_allocation - total_taken, 0)
@@ -966,6 +991,7 @@ class LeaveController(http.Controller):
                 'carried_forward': getattr(record, 'annual_carry', 0),
                 'expired_carried': getattr(record, 'expired_carry', 0),
             }
+
 
     
     def _get_taken_leaves_after_date(self, employee_id, leave_type, year, after_date):
