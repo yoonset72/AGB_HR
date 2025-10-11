@@ -5,6 +5,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>    
     <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/register.css"/>
     <script type="text/javascript" src="/AGB_HR/static/src/js/register.js"/>
+    <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
   </head>
     <body>
       <div class="agb-container">

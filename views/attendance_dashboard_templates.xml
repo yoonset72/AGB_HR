@@ -3,11 +3,13 @@
     <!-- Main Dashboard Template -->
     <template id="main_dashboard" name="Attendance Dashboard">
         <head>
-            <title>AGB Communication - Attendance Dashboard</title>
+            <title>Attendance Dashboard</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
             <script type="text/javascript" src="/AGB_HR/static/src/js/attendance_dashboard.js" defer="defer"/>
+            <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
+
         </head>
         <body>
             <div class="agb-app-container">
@@ -122,8 +124,8 @@
 
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
-                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Attendance System v1.0</p>
+                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                 </div>
             </div>
 
@@ -137,9 +139,10 @@
         <head>
             <title>Attendance Calendar</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>   
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
             <script type="text/javascript" src="/AGB_HR/static/src/js/attendance_dashboard.js"/>
+            <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
         </head>
         <body>
             <div class="agb-app-container">
@@ -147,6 +150,7 @@
                 <div class="agb-top-nav agb-sticky-header">
                     <h1 class="agb-nav-title">Attendance Calendar</h1>
                     <div class="agb-nav-actions">
+                       
                         <button class="agb-btn agb-btn-link" onclick="window.location.href='/attendance/dashboard'">
                             <i class="fa fa-arrow-left"></i> Dashboard
                         </button>
@@ -173,7 +177,7 @@
                         <div class="agb-calendar-legend">
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-present"></div>
-                                <span>Present/Check-in/out (Including Weekends)</span>
+                                <span>Present/Check-in/out</span>
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-absent"></div>
@@ -181,22 +185,22 @@
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-weekend"></div>
-                                <span>Weekend (No Work/Leave)</span>
+                                <span>Weekend</span>
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-holiday"></div>
-                                <span>Public Holiday (Not Clickable)</span>
+                                <span>Public Holiday</span>
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-leave"></div>
-                                <span>Leave (Yellow - Including Weekends)</span>
+                                <span>Leave</span>
                             </div>
                             <div class="agb-legend-item">
-                                <div class="agb-legend-dot" style="background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%);"></div>
+                                <div class="agb-legend-dot" style="background: linear-gradient(135deg, #fef3c7 50%, #10b981 50%);"></div>
                                 <span>Half Leave + Half Attendance</span>
                             </div>
                             <div class="agb-legend-item">
-                                <div class="agb-legend-dot" style="background: linear-gradient(135deg, #fef2f2 50%, #fef3c7 50%);"></div>
+                                <div class="agb-legend-dot" style="background: linear-gradient(135deg, #ef4444 50%, #fef3c7 50%);"></div>
                                 <span>Invalid Half Leave (No Required Attendance)</span>
                             </div>
                         </div>
@@ -240,7 +244,8 @@
                                             #{data['status'] == 'weekend_partial' and 'agb-calendar-weekend-partial' or ''}
                                             #{data['status'] == 'weekend' and 'agb-calendar-weekend' or ''}
                                             #{data['is_today'] and 'agb-calendar-today' or ''}
-                                            #{data['status'] == 'future' and 'agb-calendar-future' or ''}"
+                                            #{data['status'] == 'future' and 'agb-calendar-future' or ''}
+                                            #{data['status'] == 'future_half_leave' and 'agb-calendar-future-half-leave' or ''}"
                                             
                                         t-attf-onclick="#{data.get('is_clickable') and 'showDayDetails(this)' or ''}"
                                         t-attf-data-leave="#{ '1' if data.get('leave') else '0' }"
@@ -278,7 +283,7 @@
                                             <div class="agb-status-dot agb-status-dot-present agb-status-dot-left"></div>
                                             <div class="agb-status-dot agb-status-dot-present agb-status-dot-right"></div>
                                         </t>
-                                        <t t-elif="data['status'] == 'full_absent'">
+                                        <t t-elif="data['status'] == 'full_absent' or data['status'] == 'invalid_half_leave' and not data.get('has_check_in') and not data.get('has_checkout')">
                                             <!-- Full absent: 2 red dots -->
                                             <div class="agb-status-dot agb-status-dot-absent agb-status-dot-left"></div>
                                             <div class="agb-status-dot agb-status-dot-absent agb-status-dot-right"></div>
@@ -398,7 +403,7 @@
                                     <span class="agb-detail-label"><i class="fa fa-calendar"></i> To</span>
                                     <span class="agb-detail-value" id="modal-leave-to"></span>
                                 </div><div class="agb-detail-row">
-                                    <span class="agb-detail-label"><i class="fa fa-clock"></i> Duration</span>
+                                    <span class="agb-detail-label"><i class="fa fa-calendar-check-o"></i> Duration</span>
                                     <span class="agb-detail-value" id="modal-leave-duration"> </span>
                                 </div>
                                 <div class="agb-detail-row">
@@ -406,11 +411,11 @@
                                     <span class="agb-detail-value" id="modal-leave-reason"></span>
                                 </div>
                                 <div class="agb-detail-row">
-                                    <span class="agb-detail-label"><i class="fa fa-user-check"></i> First Approver</span>
+                                    <span class="agb-detail-label"><i class="fa fa-user"></i> First Approver</span>
                                     <span class="agb-detail-value" id="modal-leave-approver1"></span>
                                 </div>
                                 <div class="agb-detail-row">
-                                    <span class="agb-detail-label"><i class="fa fa-user-check"></i> Second Approver</span>
+                                    <span class="agb-detail-label"><i class="fa fa-users"></i> Second Approvers</span>
                                     <span class="agb-detail-value" id="modal-leave-approver2"></span>
                                 </div>
                                 <div class="agb-detail-row">
@@ -424,8 +429,8 @@
 
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
-                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.1 - Enhanced with Public Holidays and Weekend Work</p>
+                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                 </div>
             </div>
         </body>
@@ -439,6 +444,7 @@
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>    
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
             <script type="text/javascript" src="/AGB_HR/static/src/js/attendance_dashboard.js"/>
+            <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
         </head>
         <body>
             <div class="agb-app-container">
@@ -526,8 +532,8 @@
 
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
-                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.1</p>
+                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                 </div>
             </div>
         </body>
@@ -541,6 +547,7 @@
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>    
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
             <script type="text/javascript" src="/AGB_HR/static/src/js/attendance_dashboard.js"/>
+            <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
         </head>
         <body>
             <div class="agb-app-container">
@@ -602,8 +609,8 @@
 
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
-                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.1</p>
+                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                 </div>
             </div>
         </body>
@@ -616,6 +623,7 @@
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>    
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/register.css"/>
+            <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
         </head>
         <body>
             <div class="agb-app-container">
@@ -645,8 +653,8 @@
 
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
-                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.1</p>
+                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                 </div>
             </div>
         </body>

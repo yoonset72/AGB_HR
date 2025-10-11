@@ -81,6 +81,13 @@ class AttendanceDashboardController(http.Controller):
         # --- Calculate stats ---
         stats = self._calculate_stats(employee, attendances, start_date, end_date)
 
+        # --- ✅ Calculate working days (excluding weekends + public holidays) ---
+        working_days = self._get_working_days(start_date, end_date)
+        stats['working_days'] = working_days
+
+
+        request.session['attendance_stats'] = stats
+
         # --- Leave records ---
         leaves = request.env['hr.leave'].sudo().search([
             ('employee_id', '=', employee.id),
@@ -100,7 +107,6 @@ class AttendanceDashboardController(http.Controller):
                 leave.request_date_to,
                 leave.number_of_days
             )
-
 
         return request.render('AGB_HR.main_dashboard', {
             'employee': employee,
@@ -171,7 +177,7 @@ class AttendanceDashboardController(http.Controller):
             current += relativedelta(months=1)
 
         # Total present based on attendance_fraction
-        present_count = sum(day['attendance_fraction'] for day in calendar_data.values())
+        present_count = sum(day.get('attendance_fraction', 0) for day in calendar_data.values())
 
         # Calculate absent count using absent_fraction from _get_absent_days
         absent_days = self._get_absent_days(employee)
@@ -179,13 +185,6 @@ class AttendanceDashboardController(http.Controller):
             day.get('absent_fraction', 0)
             for day in absent_days
             if start_date.date() <= day.get('date', date.min) <= end_date.date()
-        )
-        
-        # Add invalid half leaves to absent count
-        absent_count += sum(
-            day.get('number_of_days', 0)
-            for day in calendar_data.values()
-            if day.get('is_invalid_half_leave')
         )
 
         # Late count
@@ -204,6 +203,36 @@ class AttendanceDashboardController(http.Controller):
             'lateCount': late_count,
             'total_days': total_days,
         }
+    
+    def _get_working_days(self, start_date, end_date):
+        """Calculate number of working days (Mon–Fri) excluding public holidays."""
+        # Fetch public holidays
+        public_holidays = request.env['resource.calendar.leaves'].sudo().search([
+            ('resource_id', '=', False),   # Global holidays
+            ('date_from', '<=', end_date),
+            ('date_to', '>=', start_date)
+        ])
+
+        # Collect holiday dates into a set for fast lookup
+        public_holiday_dates = set()
+        for ph in public_holidays:
+            current = ph.date_from.date()
+            while current <= ph.date_to.date():
+                public_holiday_dates.add(current)
+                current += timedelta(days=1)
+
+        # Count working days (Mon–Fri and not a public holiday)
+        current_date = start_date.date()
+        working_days = 0
+        while current_date <= end_date.date():
+            if current_date.weekday() < 5 and current_date not in public_holiday_dates:
+                working_days += 1
+            current_date += timedelta(days=1)
+
+        _logger.info("Working Days (Excluding Weekends & Holidays): %s", working_days)
+        return working_days
+
+
 
     def _get_calendar_data(self, employee, year, month):
         """Enhanced calendar data with proper half-day leave + public holiday detection"""
@@ -273,64 +302,63 @@ class AttendanceDashboardController(http.Controller):
                 half_day_type = leave.request_date_from_period if leave.request_unit_half else None
                 
                 # Check if it's a half-day leave (0.5, 1.5, 2.5, etc.)
-                if leave_duration % 1 == 0.5:
-                    # Validate half-day leave with attendance
+                if leave_duration % 1 == 0.5 and current_date <= today_date:  # validate only for past/present
                     if half_day_type == 'am':  # Morning leave
-                        # Afternoon attendance must be present (check_out exists)
                         if not check_out or working_hours < 2:
                             is_invalid_half_leave = True
                     elif half_day_type == 'pm':  # Afternoon leave
-                        # Morning attendance must be present (check_in exists)
                         if not check_in or working_hours < 2:
                             is_invalid_half_leave = True
 
             # Determine if it's partial leave (leave with attendance)
             is_partial_leave = has_leave and attendance_fraction > 0 and not is_invalid_half_leave
 
-            # --- Enhanced Status determination ---
+            # --- Status determination ---
             if is_public_holiday:
                 status = 'public_holiday'
             elif is_invalid_half_leave:
-                status = 'invalid_half_leave'   # Half-day leave without corresponding attendance
+                status = 'invalid_half_leave'
             elif has_leave and not is_partial_leave:
-                status = 'leave'               # Full leave
+                if current_date > today_date and any(l.number_of_days % 1 == 0.5 for l in day_leaves):
+                    status = 'future_half_leave'
+                else:
+                    status = 'leave'
             elif is_partial_leave:
-                status = 'partial_leave'       # Partial leave (leave with attendance)
+                status = 'partial_leave'
             elif weekday >= 5 and attendance_fraction > 0:
-                # Weekend work
-                if attendance_fraction == 1.0:
-                    status = 'weekend_present'
-                else:
-                    status = 'weekend_partial'
+                status = 'weekend_present' if attendance_fraction == 1.0 else 'weekend_partial'
             elif weekday >= 5:
-                status = 'weekend'             # Regular weekend
+                status = 'weekend'
             elif attendance_fraction == 1.0:
-                status = 'present'             # Full attendance
+                status = 'present'
             elif attendance_fraction == 0.5:
-                # Check if it's partial absent or partial present
                 if current_date <= today_date and not has_leave:
-                    status = 'partial_absent'  # Missing check-in or check-out
+                    status = 'partial_absent'
                 else:
-                    status = 'partial'         # Partial attendance
+                    status = 'partial'
             elif attendance_fraction == 0.0 and current_date <= today_date and weekday < 5:
-                status = 'full_absent'         # Full absent
+                status = 'full_absent'
             else:
-                status = 'absent'              # Default absent
+                status = 'absent'
 
-            # Override for future dates
-            if current_date > today_date and not has_leave:
-                status = 'future'
+            # --- Fix: handle future days properly ---
+            if current_date > today_date:
+                if is_public_holiday:
+                    status = 'public_holiday'
+                elif has_leave:
+                    if any(l.number_of_days % 1 == 0.5 for l in day_leaves):
+                        status = 'future_half_leave'
+                    else:
+                        status = 'leave'
+                else:
+                    status = 'future'
 
             # Legacy status mapping for backward compatibility
             if status == 'partial_leave':
                 is_half_leave = True
             elif status in ['weekend_present', 'weekend_partial']:
-                # Weekend work cases
                 if has_leave:
-                    if attendance_fraction > 0:
-                        status = 'weekend_half_leave'
-                    else:
-                        status = 'weekend_leave'
+                    status = 'weekend_half_leave' if attendance_fraction > 0 else 'weekend_leave'
             else:
                 is_half_leave = False
 
@@ -364,7 +392,7 @@ class AttendanceDashboardController(http.Controller):
                 'formatted_date': current_date.strftime('%Y-%m-%d'),
                 'check_in_time': check_in.strftime('%H:%M') if check_in else None,
                 'check_out_time': check_out.strftime('%H:%M') if check_out else None,
-                'working_hours': round(working_hours,2) if working_hours else 0,
+                'working_hours': round(working_hours, 2) if working_hours else 0,
                 'is_weekend': weekday >= 5,
                 'is_today': current_date == today_date,
                 'is_future': current_date > today_date,
@@ -401,7 +429,6 @@ class AttendanceDashboardController(http.Controller):
                     'is_invalid_half_leave': is_invalid_half_leave,
                 })
             
-
             # --- Add holiday info if exists ---
             if day_holidays:
                 holiday = day_holidays[0]
@@ -432,8 +459,7 @@ class AttendanceDashboardController(http.Controller):
             ('date_to', '>=', start_date)
         ])
 
-    
-    
+ 
     def _get_absent_days(self, employee):
         start_date, end_date = self._get_26th_to_25th_period()
         today = self._now_myanmar().date()
@@ -444,7 +470,7 @@ class AttendanceDashboardController(http.Controller):
                 '&', ('check_out', '>=', start_date), ('check_out', '<=', end_date)
         ])
 
-        # 🔑 Fetch all valid leaves in range
+        # ✅ Valid leaves in range
         leaves = request.env['hr.leave'].sudo().search([
             ('employee_id', '=', employee.id),
             ('request_date_from', '<=', end_date),
@@ -452,9 +478,9 @@ class AttendanceDashboardController(http.Controller):
             ('state', 'in', ['confirm', 'validate', 'validate1'])
         ])
 
-        # 🔑 Fetch public holidays in range
+        # ✅ Public holidays
         public_holidays = request.env['resource.calendar.leaves'].sudo().search([
-            ('resource_id', '=', False),   # Global holiday (not tied to one employee)
+            ('resource_id', '=', False),
             ('date_from', '<=', end_date),
             ('date_to', '>=', start_date)
         ])
@@ -463,30 +489,93 @@ class AttendanceDashboardController(http.Controller):
         current_date = start_date.date()
 
         while current_date <= today:
-            # ✅ Skip if this day is a public holiday
-            day_holidays = public_holidays.filtered(
-                lambda h: h.date_from.date() <= current_date <= h.date_to.date()
-            )
-            if day_holidays:
+            # ✅ Skip weekends
+            if current_date.weekday() >= 5:  
                 current_date += timedelta(days=1)
                 continue
 
-            # ✅ Skip if this day is covered by leave
-            day_leaves = leaves.filtered(
-                lambda l: l.request_date_from <= current_date <= l.request_date_to
-            )
-            if day_leaves:
+            # ✅ Skip public holidays
+            if public_holidays.filtered(lambda h: h.date_from.date() <= current_date <= h.date_to.date()):
                 current_date += timedelta(days=1)
                 continue
 
-            # Find attendance for this day
-            day_att = attendances.filtered(lambda a: 
+            # ✅ Check if day has leave
+            day_leaves = leaves.filtered(lambda l: l.request_date_from <= current_date <= l.request_date_to)
+
+            # ✅ Check attendance
+            day_att = attendances.filtered(lambda a:
                 (a.check_in and a.check_in.date() == current_date) or
-                (not a.check_in and a.check_out and a.check_out.date() == current_date)
+                (a.check_out and a.check_out.date() == current_date)
             )
 
-            if not day_att and current_date.weekday() < 5:
-                # Full absent
+            check_in = day_att[0].check_in.astimezone(MYANMAR_TZ) if day_att and day_att[0].check_in else None
+            check_out = day_att[0].check_out.astimezone(MYANMAR_TZ) if day_att and day_att[0].check_out else None
+            working_hours = (check_out - check_in).total_seconds() / 3600 if check_in and check_out else 0
+
+            # ✅ Today special case: checked in but no checkout yet → skip absent marking
+            if current_date == today and check_in and not check_out:
+                current_date += timedelta(days=1)
+                continue
+
+            # ✅ Handle full-day leave
+            if day_leaves and all(l.number_of_days >= 1 for l in day_leaves):
+                current_date += timedelta(days=1)
+                continue
+
+            # ✅ Handle half-day leave logic
+            half_day_leave = day_leaves.filtered(lambda l: l.request_unit_half)
+            if half_day_leave:
+                leave = half_day_leave[0]
+                half_day_type = leave.request_date_from_period  # 'am' or 'pm'
+                _logger.info("Half day type: %s", half_day_type)
+
+                if half_day_type == 'am':
+                    # Morning leave → must have afternoon attendance
+                    if working_hours < 2 or not day_att:
+                        if check_in and not check_out:
+                            absence_type = 'Afternoon Absent (checkout missing)'
+                        elif not check_in and check_out:
+                            absence_type = 'Afternoon Absent (checkin missing)'
+                        else:
+                            absence_type = 'Afternoon Absent'
+
+                        absent_days.append({
+                            'date': current_date,
+                            'formatted_date': current_date.strftime('%A, %B %d, %Y'),
+                            'iso_date': current_date.isoformat(),
+                            'status': 'half_absent',
+                            'absence_type': absence_type,
+                            'attendance_fraction': 0.5,
+                            'absent_fraction': 0.5,
+                            'check_in_time': check_in.strftime('%H:%M') if check_in else None,
+                            'check_out_time': check_out.strftime('%H:%M') if check_out else None,
+                        })
+                elif half_day_type == 'pm':
+                    # Afternoon leave → must have morning attendance
+                     if working_hours < 2 or not day_att:
+                        if check_in and not check_out:
+                            absence_type = 'Morning Absent (checkout missing)'
+                        elif not check_in and check_out:
+                            absence_type = 'Morning Absent (checkin missing)'
+                        else:
+                            absence_type = 'Morning Absent'
+
+                        absent_days.append({
+                            'date': current_date,
+                            'formatted_date': current_date.strftime('%A, %B %d, %Y'),
+                            'iso_date': current_date.isoformat(),
+                            'status': 'half_absent',
+                            'absence_type': absence_type,
+                            'attendance_fraction': 0.5,
+                            'absent_fraction': 0.5,
+                            'check_in_time': check_in.strftime('%H:%M') if check_in else None,
+                            'check_out_time': check_out.strftime('%H:%M') if check_out else None,
+                        })
+                current_date += timedelta(days=1)
+                continue
+
+            # ✅ No leave, check attendance
+            if not day_att:
                 absent_days.append({
                     'date': current_date,
                     'formatted_date': current_date.strftime('%A, %B %d, %Y'),
@@ -497,45 +586,33 @@ class AttendanceDashboardController(http.Controller):
                     'absent_fraction': 1.0
                 })
             else:
-                att = day_att[0] if day_att else None
-                if att:
-                    check_in = att.check_in.astimezone(MYANMAR_TZ) if att.check_in else None
-                    check_out = att.check_out.astimezone(MYANMAR_TZ) if att.check_out else None
-                    working_hours = (check_out - check_in).total_seconds() / 3600 if check_in and check_out else 0
+                if working_hours >= 5:
+                    pass  # Fully present
+                else:
+                    absence_type = 'Half Day Absent'
+                    if check_in and not check_out:
+                        absence_type = 'Evening Absent'
+                    elif not check_in and check_out:
+                        absence_type = 'Morning Absent'
+                    elif working_hours < 5:
+                        absence_type = 'Half Day Absent (Short Hours)'
 
-                    # Skip marking today as absent if checked in but not checked out yet
-                    if current_date == today and check_in and not check_out:
-                        current_date += timedelta(days=1)
-                        continue
-
-                    if check_in and check_out and working_hours >= 5:
-                        pass  # Fully present
-                    else:
-                        if check_in and not check_out:
-                            absence_type = 'Evening Absent'
-                        elif not check_in and check_out:
-                            absence_type = 'Morning Absent'
-                        elif working_hours < 5:
-                            absence_type = 'Half Day Absent (Morning or Evening Absent)'
-                        else:
-                            absence_type = 'Half Day Absent'
-
-                        absent_days.append({
-                            'date': current_date,
-                            'formatted_date': current_date.strftime('%A, %B %d, %Y'),
-                            'iso_date': current_date.isoformat(),
-                            'status': 'half_absent',
-                            'absence_type': absence_type,
-                            'check_in_time': check_in.strftime('%H:%M') if check_in else None,
-                            'check_out_time': check_out.strftime('%H:%M') if check_out else None,
-                            'attendance_fraction': 0.5,
-                            'absent_fraction': 0.5
-                        })
+                    absent_days.append({
+                        'date': current_date,
+                        'formatted_date': current_date.strftime('%A, %B %d, %Y'),
+                        'iso_date': current_date.isoformat(),
+                        'status': 'half_absent',
+                        'absence_type': absence_type,
+                        'attendance_fraction': 0.5,
+                        'absent_fraction': 0.5,
+                        'check_in_time': check_in.strftime('%H:%M') if check_in else None,
+                        'check_out_time': check_out.strftime('%H:%M') if check_out else None,
+                    })
 
             current_date += timedelta(days=1)
+            _logger.info("Final absent_days for employee %s: %s", employee.id, absent_days)
 
         return absent_days
-
 
     def _get_late_days(self, employee):
         start_date, end_date = self._get_26th_to_25th_period()

@@ -2,8 +2,9 @@
 <odoo>
   <template id="employee_profile_template" name="Employee Profile">
     <head>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.1/css/all.min.css"/>    
       <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/profile.css"/>
+      <!-- <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/> -->
        <script type="text/javascript" src="/AGB_HR/static/src/js/profile.js"/>
        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
        <meta name="csrf-token" t-att-content="request.csrf_token()"/>
@@ -12,37 +13,15 @@
     <body>
       <!-- Main App Container -->
       <div class="agb-app-container">
-        
-        <!-- Sticky Top Navigation -->
         <div class="agb-top-nav agb-sticky-header">
-          <div class="agb-nav-content">
-            <div class="agb-nav-left">
-              <button class="agb-btn agb-btn-ghost agb-back-btn" onclick="window.history.back()">
-                <i class="fa fa-arrow-left"></i>
-                <span class="agb-btn-text">Back to Dashboard</span>
-              </button>
-              <h1 class="agb-nav-title">Employee Profile</h1>
-            </div>
-            
-            <div class="agb-nav-actions">
-              <!-- Welcome message with waving hand -->
-              <span class="agb-nav-welcome">
-                <span>Welcome, <t t-esc="employee.name"/>!</span>
-                <span class="agb-wave-emoji">👋</span>
-              </span>
-              
-              <!-- Profile Menu -->
-              <div class="agb-profile-menu">
-                <div class="agb-profile-initials" onclick="toggleProfileMenu()">
-                  <t t-esc="employee.name[:2].upper() if employee.name else 'EM'"/>
-                </div>
-                <div id="profile-dropdown" class="agb-profile-dropdown agb-hidden">
-                  <a href="/attendance/logout" class="agb-profile-item agb-logout">
-                    <i class="fa fa-sign-out"></i> Logout
-                  </a>
-                </div>
-              </div>
-            </div>
+          <h1 class="agb-nav-title">Employee Profile</h1>
+          <div class="agb-nav-actions">
+            <button class="agb-btn agb-btn-link" onclick="window.location.href='/attendance/dashboard'">
+              <i class="fa fa-arrow-left"></i> Dashboard
+            </button>
+            <a href="/attendance/logout" class="agb-btn agb-btn-link">
+              <i class="fa fa-sign-out"></i> Logout
+            </a>
           </div>
         </div>
 
@@ -101,24 +80,44 @@
                   </div>
                 </div>
                 <div class="agb-stats-row">
+                <!-- Experience (Service Duration) -->
                 <div class="agb-stat-card">
-                  <div class="agb-stat-icon agb-stat-experience">
-                    <i class="fa fa-users"></i>
-                  </div>
-                  <div class="agb-stat-content">
-                    <h3>2.5</h3>
-                    <p>Years Experience</p>
+                  <div class="agb-stat-circle">
+                    <t t-set="service" t-value="request.session.get('service_info', {})"/>
+                    <t t-set="years" t-value="service.get('years', 0)"/>
+                    <t t-set="months" t-value="service.get('months', 0)"/>
+                    <t t-set="percent" t-value="min(int((years / 10) * 100), 100)"/>
+
+                    <div class="circular-progress" t-att-style="'--progress:' + str(percent) + '%;'">
+                      <div class="value">
+                        <h3>
+                          <t t-esc="years"/>
+                          <t t-if="months >= 6">.5</t>
+                        </h3>
+                        <p>Years</p>
+                      </div>
+                    </div>
+                    <p class="label">Together with AGB</p>
                   </div>
                 </div>
+
                 
                 <div class="agb-stat-card">
-                  <div class="agb-stat-icon agb-stat-attendance">
-                    <i class="fa fa-clock-o"></i>
+                  <div class="agb-stat-circle">
+                    <t t-set="stats" t-value="stats or {}"/>
+                    <t t-set="attendance" t-value="stats.get('attendanceCount', 0)"/>
+                    <t t-set="working" t-value="stats.get('working_days', 0)"/>
+                    <t t-set="percent" t-value="(attendance / working * 100) if working else 0"/>
+
+                    <div class="circular-progress" t-att-style="'--progress:' + str(int(percent)) + '%;'">
+                      <div class="value">
+                        <h3><t t-esc="attendance"/></h3>
+                        <p>/<t t-esc="working"/></p>
+                      </div>
+                    </div>
+                    <p class="label">Attendance Rate</p>
                   </div>
-                  <div class="agb-stat-content">
-                    <h3>95%</h3>
-                    <p>Attendance Rate</p>
-                  </div>
+
                 </div>
               </div>
               </div>
@@ -232,9 +231,9 @@
               <div class="agb-form-card">
                 <div class="agb-card-header">
                   <h3><i class="fa fa-briefcase"></i> Work Information</h3>
-                  <button class="agb-btn-edit" onclick="editSection('work')">
+                  <!-- <button class="agb-btn-edit" onclick="editSection('work')">
                     <i class="fa fa-edit"></i> Edit
-                  </button>
+                  </button> -->
                 </div>
                 <div class="agb-card-content">
                   <div class="agb-info-grid">

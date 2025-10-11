@@ -26,37 +26,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function loadLeaveBalances() {
     try {
-        showLoading(true);
-        
-        const response = await fetch('/api/leave-balance', {
+        // 1. Fetch leave types
+        const typesRes = await fetch('/api/time-off-types', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                employee_number: employeeData.employee_number
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_number: employeeData.employee_number })
         });
 
-        const data = await response.json();
-        const result = data.result || {}; 
+        const typesJson = await typesRes.json();
+        console.log("DEBUG raw leave types =", typesJson);
 
-        console.log('Leave balance API response:', result);
+        // Extract inner result array safely
+        const leaveTypes = Array.isArray(typesJson?.result?.result)
+            ? typesJson.result.result
+            : [];
+        console.log("DEBUG normalized leave types =", leaveTypes);
 
-        if (result.success) {
-            leaveBalanceData = result;
-            renderLeaveBalances(result);
-        } else {
-            throw new Error(result.error || 'Failed to load leave balances');
-        }
+        // 2. Fetch leave balances
+        const balancesRes = await fetch('/api/leave-balance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_number: employeeData.employee_number })
+        });
+
+        const balancesJson = await balancesRes.json();
+        const leaveBalances = balancesJson.result || {};
+        console.log("DEBUG leave balances =", leaveBalances);
+
+        // 3. Merge leave types with balances
+        const merged = {};
+
+        leaveTypes.forEach(type => {
+            // Convert name like "Annual Leave" -> key "annual"
+            const key = type.name.toLowerCase().split(' ')[0];
+
+            const balanceData = leaveBalances[key] || {};
+
+            merged[key] = {
+                total: balanceData.total || 0,
+                taken: balanceData.taken || 0,
+                available: balanceData.available || 0,
+                pending: balanceData.pending || 0
+            };
+        });
+
+        console.log("✅ Final merged leave balances:", merged);
+
+        // Render leave balance cards
+        renderLeaveBalances(merged);
 
     } catch (error) {
-        console.error('Error loading leave balances:', error);
-        showError(error.message);
-    } finally {
-        showLoading(false);
+        console.error("❌ Error loading leave balances:", error);
+        showError("Error loading leave balances");
     }
 }
+
+
+// Refresh data
+function refreshLeaveBalances() {
+    console.log('Refreshing leave balances...');
+    loadLeaveBalances();
+}
+
+
+// Simple notification helper
+function showNotification(message, type = "info") {
+    console.log(`[${type.toUpperCase()}] ${message}`);
+}
+
+
 
 // Render leave balance cards with new design
 function renderLeaveBalances(data) {
@@ -71,13 +109,13 @@ function renderLeaveBalances(data) {
 
     // Define leave types with their display information
     const leaveTypes = [
-        { key: 'annual', name: 'Annual Leave', icon: 'fa-calendar-check', class: 'annual' },
+        { key: 'annual', name: 'Annual Leave', icon: 'fa-calendar-check-o', class: 'annual' },
         { key: 'casual', name: 'Casual Leave', icon: 'fa-coffee', class: 'casual' },
         { key: 'maternity', name: 'Maternity Leave', icon: 'fa-female', class: 'maternity' },
         { key: 'medical', name: 'Medical Leave', icon: 'fa-medkit', class: 'medical' },
-        { key: 'funeral', name: 'Funeral Leave', icon: 'fa-face-sad-tear', class: 'funeral' },
+        { key: 'funeral', name: 'Funeral Leave', icon: 'fa-frown-o', class: 'funeral' },
         { key: 'marriage', name: 'Married Leave', icon: 'fa-heart', class: 'marriage' },
-        { key: 'unpaid', name: 'Unpaid Leave', icon: 'fa-clock', class: 'unpaid' },
+        { key: 'unpaid', name: 'Unpaid Leave', icon: 'fa-ban', class: 'unpaid' },
         { key: 'paternity', name: 'Paternity Leave', icon: 'fa-male', class: 'paternity' }
     ];
 

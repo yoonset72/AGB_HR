@@ -199,13 +199,17 @@ class LeaveController(http.Controller):
         if not employee_number:
             return request.redirect('/employee/register')
 
+        leave_data = request.session.get('last_leave_request', {})
+        if 'last_leave_request' in request.session:
+            del request.session['last_leave_request']
+
         return request.render('AGB_HR.leave_request_success_template', {
-            'employee_name': kwargs.get('employee_name', ''),
-            'leave_type': kwargs.get('leave_type', ''),
-            'date_from': kwargs.get('date_from', ''),
-            'date_to': kwargs.get('date_to', ''),
-            'number_of_days': kwargs.get('number_of_days', ''),
-            'description': kwargs.get('description', ''),
+            'employee_name': leave_data.get('employee_name', ''),
+            'leave_type': leave_data.get('leave_type', ''),
+            'date_from': leave_data.get('date_from', ''),
+            'date_to': leave_data.get('date_to', ''),
+            'number_of_days': leave_data.get('number_of_days', ''),
+            'description': leave_data.get('description', ''),
             'page_title': 'Request Submitted Successfully'
         })
       
@@ -442,6 +446,8 @@ class LeaveController(http.Controller):
                 'description': leave_request.name,
             }
 
+            request.session['last_leave_request'] = result_data
+
             return request.make_response(json.dumps({
                 'success': True,
                 'message': 'Leave request submitted successfully',
@@ -502,7 +508,7 @@ class LeaveController(http.Controller):
             _logger.exception("Error fetching leave requests: %s", str(e))
             return {'success': False, 'error': str(e)}
 
-    @http.route('/api/check/leave/valid', type='json', auth='user', methods=['POST'], csrf=False)
+    @http.route('/api/check/leave/valid', type='json', auth='public', methods=['POST'], csrf=False)
     def check_leave_valid(self, **kwargs):
         try:
             data = request.jsonrequest
@@ -510,92 +516,205 @@ class LeaveController(http.Controller):
             request_date_from = data.get('request_date_from')
             request_date_to = data.get('request_date_to')
 
-            # Log incoming data for debugging
-            print("DEBUG - Incoming data:")
-            print(f"  employee_number: {employee_number}")
-            print(f"  request_date_from: {request_date_from} ({type(request_date_from)})")
-            print(f"  request_date_to: {request_date_to} ({type(request_date_to)})")
-
             # Validate input presence
             if not employee_number or not request_date_from or not request_date_to:
-                return {
-                    'success': False,
-                    'error': 'Missing required parameters: employee_number, request_date_from, or request_date_to'
-                }
+                return {'success': False, 'error': 'Missing required parameters: employee_number, request_date_from, or request_date_to'}
 
             # Parse dates
             try:
                 date_from = datetime.strptime(request_date_from, '%Y-%m-%d').date()
                 date_to = datetime.strptime(request_date_to, '%Y-%m-%d').date()
-            except Exception as parse_err:
-                print("ERROR parsing dates:", parse_err)
-                return {
-                    'success': False,
-                    'error': 'Dates must be in string format: YYYY-MM-DD'
-                }
+            except Exception:
+                return {'success': False, 'error': 'Dates must be in string format: YYYY-MM-DD'}
 
             # Find employee
             employee = request.env['hr.employee'].sudo().search([('employee_number', '=', employee_number)], limit=1)
             if not employee:
                 return {'success': False, 'error': 'Employee not found'}
 
-            # ✅ Check overlapping leaves (approved)
+            # Check overlapping leaves
             overlapping_leaves = request.env['hr.leave'].sudo().search([
                 ('employee_id', '=', employee.id),
-                ('state', '=', 'validate'),
+                ('state', 'in', ['confirm', 'validate', 'validate1']),
                 ('request_date_from', '<=', date_to),
                 ('request_date_to', '>=', date_from)
             ])
 
             if overlapping_leaves:
                 errors = []
+                state_labels = {'confirm': 'Pending', 'validate1': 'Second Approval', 'validate': 'Approved'}
                 for leave in overlapping_leaves:
-                    if leave.request_date_from == leave.request_date_to:
-                        # Single day leave
-                        errors.append(
-                            f"Date {leave.request_date_from} is already taken as {leave.holiday_status_id.display_name}"
-                        )
-                    else:
-                        # Multi-day leave
-                        errors.append(
-                            f"Date ({leave.request_date_from} → {leave.request_date_to}) "
-                            f"is already taken as {leave.holiday_status_id.display_name}"
-                        )
-                return {
-                    'success': False,
-                    'error': "; ".join(errors)
-                }
+                    state_label = state_labels.get(leave.state, leave.state)
+                    from_str = leave.request_date_from.isoformat() if leave.request_date_from else 'N/A'
+                    to_str = leave.request_date_to.isoformat() if leave.request_date_to else 'N/A'
 
-            # ✅ Check leaves before the start date
+                    if leave.request_date_from == leave.request_date_to:
+                        errors.append(f"Date {from_str} is already taken as {leave.holiday_status_id.display_name} and it's now in {state_label} state")
+                    else:
+                        errors.append(f"Date ({from_str} → {to_str}) is already taken as {leave.holiday_status_id.display_name} and it's now in {state_label} state")
+
+                return {'success': False, 'error': "; ".join(errors)}
+
+            # Check leaves before start date
             before_leaves = request.env['hr.leave'].sudo().search([
                 ('employee_id', '=', employee.id),
-                ('state', '=', 'validate'),
+                ('state', 'in', ['confirm', 'validate', 'validate1']),
                 ('request_date_to', '=', date_from - timedelta(days=1))
             ])
             if before_leaves:
+                errors = []
+                for leave in before_leaves:
+                    # Format the leave dates nicely
+                    if leave.request_date_from == leave.request_date_to:
+                        errors.append(f"{leave.request_date_from.strftime('%b %d')} is taken as {leave.holiday_status_id.display_name}")
+                    else:
+                        errors.append(f"{leave.request_date_from.strftime('%b %d')} and {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
                 return {
                     'success': False,
-                    'error': 'Casual Leave cannot be combined with any other form of leave before the start date.'
+                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave before the start date"
                 }
 
-            # ✅ Check leaves after the end date
+            # Check leaves after end date
             after_leaves = request.env['hr.leave'].sudo().search([
                 ('employee_id', '=', employee.id),
-                ('state', '=', 'validate'),
+                ('state', 'in', ['confirm', 'validate', 'validate1']),
                 ('request_date_from', '=', date_to + timedelta(days=1))
             ])
             if after_leaves:
+                errors = []
+                for leave in after_leaves:
+                    if leave.request_date_from == leave.request_date_to:
+                        errors.append(f"{leave.request_date_from.strftime('%b %d')} is taken as {leave.holiday_status_id.display_name}")
+                    else:
+                        errors.append(f"{leave.request_date_from.strftime('%b %d')} and {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
                 return {
                     'success': False,
-                    'error': 'Casual Leave cannot be combined with any other form of leave after the end date.'
+                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave after the end date"
                 }
 
             return {'success': True}
 
+
         except Exception as e:
+            # Log exception and return JSON-safe response
             print("ERROR - Exception in check_leave_valid:", e)
             return {'success': False, 'error': str(e)}
+
         
+
+    # @http.route('/api/leave-balance', type='json', auth='public', methods=['POST'], csrf=False)
+    # def get_leave_balance_with_tracker(self, **kwargs):
+    #     try:
+    #         _logger.info("Called /api/leave-balance with kwargs: %s", kwargs)
+
+    #         # --- Employee check ---
+    #         employee_number = kwargs.get('employee_number') or request.session.get('employee_number')
+    #         if not employee_number:
+    #             _logger.debug("Missing employee_number in request")
+    #             return {'success': False, 'error': 'Missing employee_number'}
+
+    #         today = date.today()
+    #         current_year = today.year
+    #         _logger.info("Today's date: %s, Current year: %s", today, current_year)
+
+    #         employee = request.env['hr.employee'].sudo().search([
+    #             '|', ('id', '=', employee_number),
+    #             ('employee_number', '=', employee_number)
+    #         ], limit=1)
+    #         if not employee:
+    #             _logger.debug("No employee found with employee_number: %s", employee_number)
+    #             return {'success': False, 'error': 'Employee not found'}
+
+    #         _logger.info("Found employee: %s (ID: %s)", employee.name, employee.id)
+
+    #         # --- Leave types ---
+    #         leave_types = [
+    #             {'name': 'casual', 'display_name': 'Casual Leave'},
+    #             {'name': 'annual', 'display_name': 'Annual Leave'},
+    #             {'name': 'medical', 'display_name': 'Medical Leave'},
+    #             {'name': 'funeral', 'display_name': 'Funeral Leave'},
+    #             {'name': 'marriage', 'display_name': 'Marriage Leave'},
+    #             {'name': 'unpaid', 'display_name': 'Unpaid Leave'},
+    #             {'name': 'maternity', 'display_name': 'Maternity Leave'},
+    #             {'name': 'paternity', 'display_name': 'Paternity Leave'},
+    #         ]
+
+    #         result = {'success': True}
+
+    #         for leave_type in leave_types:
+    #             _logger.info("Processing leave type: %s (%s)", leave_type['name'], leave_type['display_name'])
+
+    #             tracker_record = request.env['hr.leave.tracker'].sudo().search([
+    #                 ('employee_id', '=', employee.id),
+    #                 ('leave_type_name', '=', leave_type['display_name']),
+    #                 ('year', '=', current_year)
+    #             ], limit=1)
+
+    #             if tracker_record:
+    #                 # Use updated tracker logic to compute final leave balances
+    #                 leave_balance = self._update_existing_record(tracker_record, employee, today)
+
+    #                 # --- Ensure system_taken is always present ---
+    #                 if 'system_taken' not in leave_balance:
+    #                     leave_balance['system_taken'] = leave_balance.get('taken', 0)
+
+    #                 # --- Decide what to store in taken_leaves ---
+    #                 if leave_type['display_name'] == 'Annual Leave':
+    #                     cutoff = date(today.year, 6, 30)
+    #                     if today > cutoff:
+    #                         taken_to_store = leave_balance.get('system_taken', 0)
+    #                     else:
+    #                         taken_to_store = leave_balance.get('taken', 0)
+    #                 else:
+    #                     taken_to_store = leave_balance.get('taken', 0)
+
+    #                 # --- Recalculate available as total - taken_to_store ---
+    #                 total_to_check = float(leave_balance.get('total_dynamic') or leave_balance.get('total') or 0)
+    #                 available_to_store = total_to_check - taken_to_store
+
+    #                 tracker_record.sudo().write({
+    #                     'taken_leaves': taken_to_store,
+    #                     'pending_requests': leave_balance.get('pending', 0),
+    #                     'current_balance': available_to_store,
+    #                     'annual_carry': leave_balance.get('carried_forward', 0),
+    #                     'expired_carry': leave_balance.get('expired_carried', 0),
+    #                     'write_date': fields.Datetime.now(),
+    #                     'write_uid': request.env.user.id,
+    #                     # total_allocation left unchanged
+    #                 })
+
+    #                 # Sync response dict
+    #                 leave_balance['taken'] = taken_to_store
+    #                 leave_balance['available'] = available_to_store
+
+    #             else:
+    #                 # No tracker: calculate default balance and create record
+    #                 balance_dict = self._calculate_default_leave_balance(
+    #                     leave_type['display_name'], employee, today
+    #                 )
+    #                 leave_balance = self._create_tracker_record(
+    #                     employee, leave_type, balance_dict, current_year
+    #                 )
+
+    #             # --- Ensure all numeric fields exist and are not None ---
+    #             for key in ['total', 'total_dynamic', 'accrued_new', 'taken', 'available', 'pending', 'carried_forward', 'expired_carried']:
+    #                 leave_balance[key] = leave_balance.get(key) or 0
+
+    #             total_to_check = float(leave_balance.get('total_dynamic') or leave_balance.get('total') or 0)
+
+    #             if total_to_check > 0 or leave_balance.get('pending', 0) > 0 or leave_balance.get('taken', 0) > 0:
+    #                 _logger.info("✅ Final leave_balance for %s: %s", leave_type['display_name'], leave_balance)
+    #                 result[leave_type['name']] = leave_balance
+                    
+    #             else:
+    #                 _logger.info("⏩ Skipping %s (no total, no taken, no pending)", leave_type['display_name'])
+
+    #         return result
+
+    #     except Exception as e:
+    #         _logger.exception("Error in get_leave_balance_with_tracker")
+    #         return {'success': False, 'error': str(e)}
+
 
     @http.route('/api/leave-balance', type='json', auth='public', methods=['POST'], csrf=False)
     def get_leave_balance_with_tracker(self, **kwargs):
@@ -605,19 +724,16 @@ class LeaveController(http.Controller):
             # --- Employee check ---
             employee_number = kwargs.get('employee_number') or request.session.get('employee_number')
             if not employee_number:
-                _logger.debug("Missing employee_number in request")
                 return {'success': False, 'error': 'Missing employee_number'}
 
             today = date.today()
             current_year = today.year
-            _logger.info("Today's date: %s, Current year: %s", today, current_year)
 
             employee = request.env['hr.employee'].sudo().search([
                 '|', ('id', '=', employee_number),
                 ('employee_number', '=', employee_number)
             ], limit=1)
             if not employee:
-                _logger.debug("No employee found with employee_number: %s", employee_number)
                 return {'success': False, 'error': 'Employee not found'}
 
             _logger.info("Found employee: %s (ID: %s)", employee.name, employee.id)
@@ -639,6 +755,21 @@ class LeaveController(http.Controller):
             for leave_type in leave_types:
                 _logger.info("Processing leave type: %s (%s)", leave_type['name'], leave_type['display_name'])
 
+                # --- Calculate eligibility based on current employee data ---
+                balance_dict = self._calculate_default_leave_balance(
+                    leave_type['display_name'], employee, today
+                )
+
+                # If not eligible (everything is zero), skip
+                if not balance_dict or (
+                    balance_dict.get('total', 0) == 0
+                    and balance_dict.get('pending', 0) == 0
+                    and balance_dict.get('taken', 0) == 0
+                ):
+                    _logger.info("⏩ Skipping %s (not eligible)", leave_type['display_name'])
+                    continue
+
+                # --- Find or create tracker ---
                 tracker_record = request.env['hr.leave.tracker'].sudo().search([
                     ('employee_id', '=', employee.id),
                     ('leave_type_name', '=', leave_type['display_name']),
@@ -646,53 +777,14 @@ class LeaveController(http.Controller):
                 ], limit=1)
 
                 if tracker_record:
-                    # Use updated tracker logic to compute final leave balances
                     leave_balance = self._update_existing_record(tracker_record, employee, today)
-
-                    # --- Ensure system_taken is always present ---
-                    if 'system_taken' not in leave_balance:
-                        leave_balance['system_taken'] = leave_balance.get('taken', 0)
-
-                    # --- Decide what to store in taken_leaves ---
-                    if leave_type['display_name'] == 'Annual Leave':
-                        cutoff = date(today.year, 6, 30)
-                        if today > cutoff:
-                            taken_to_store = leave_balance.get('system_taken', 0)
-                        else:
-                            taken_to_store = leave_balance.get('taken', 0)
-                    else:
-                        taken_to_store = leave_balance.get('taken', 0)
-
-                    # --- Recalculate available as total - taken_to_store ---
-                    total_to_check = float(leave_balance.get('total_dynamic') or leave_balance.get('total') or 0)
-                    available_to_store = total_to_check - taken_to_store
-
-                    tracker_record.sudo().write({
-                        'taken_leaves': taken_to_store,
-                        'pending_requests': leave_balance.get('pending', 0),
-                        'current_balance': available_to_store,
-                        'annual_carry': leave_balance.get('carried_forward', 0),
-                        'expired_carry': leave_balance.get('expired_carried', 0),
-                        'write_date': fields.Datetime.now(),
-                        'write_uid': request.env.user.id,
-                        # total_allocation left unchanged
-                    })
-
-                    # Sync response dict
-                    leave_balance['taken'] = taken_to_store
-                    leave_balance['available'] = available_to_store
-
                 else:
-                    # No tracker: calculate default balance and create record
-                    balance_dict = self._calculate_default_leave_balance(
-                        leave_type['display_name'], employee, today
-                    )
                     leave_balance = self._create_tracker_record(
                         employee, leave_type, balance_dict, current_year
                     )
 
-                # --- Ensure all numeric fields exist and are not None ---
-                for key in ['total', 'total_dynamic', 'accrued_new', 'taken', 'available', 'pending', 'carried_forward', 'expired_carried']:
+                # --- Ensure all numeric fields exist ---
+                for key in ['total','total_dynamic','accrued_new','taken','available','pending','carried_forward','expired_carried']:
                     leave_balance[key] = leave_balance.get(key) or 0
 
                 total_to_check = float(leave_balance.get('total_dynamic') or leave_balance.get('total') or 0)
@@ -700,7 +792,6 @@ class LeaveController(http.Controller):
                 if total_to_check > 0 or leave_balance.get('pending', 0) > 0 or leave_balance.get('taken', 0) > 0:
                     _logger.info("✅ Final leave_balance for %s: %s", leave_type['display_name'], leave_balance)
                     result[leave_type['name']] = leave_balance
-                    
                 else:
                     _logger.info("⏩ Skipping %s (no total, no taken, no pending)", leave_type['display_name'])
 
@@ -709,6 +800,9 @@ class LeaveController(http.Controller):
         except Exception as e:
             _logger.exception("Error in get_leave_balance_with_tracker")
             return {'success': False, 'error': str(e)}
+
+
+
 
     def _get_system_start_date(self):
         """Define when your system started tracking leaves in hr_leave"""
@@ -993,7 +1087,7 @@ class LeaveController(http.Controller):
             }
 
 
-    
+
     def _get_taken_leaves_after_date(self, employee_id, leave_type, year, after_date):
         """Get taken leaves after a specific date in the year"""
         start_of_year = date(year, 1, 1)

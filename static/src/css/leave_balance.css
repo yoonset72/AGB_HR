@@ -37,6 +37,7 @@
     font-weight: 700;
     color: #1f2937;
     font-size: 14px;
+    margin-right: 0;
 }
 
 /* Updated Balance Grid */
@@ -257,6 +258,11 @@
     border-radius: 50%;
     flex-shrink: 0;
 }
+
+.agb-dot-total {
+    background-color: #d6d8da;
+}
+
 
 .agb-dot-taken {
     background-color: #15803d;

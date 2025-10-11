@@ -69,14 +69,16 @@ class LeaveRequestForm {
 
             this.leaveBalance = {
                 casual: data.casual || { total: 0, taken: 0, available: 0, pending: 0 },
-                annual: { ...annualData, taken: annualTaken },  // <-- replaced taken with cutoff-aware value
-                medical: data.medical || { total: 30, taken: 0, available: 0, pending: 0 },
+                annual: { ...annualData, taken: annualTaken },  
                 funeral: data.funeral || { total: 7, taken: 0, available: 0, pending: 0 },
                 marriage: data.marriage || { total: 5, taken: 0, available: 0, pending: 0 },
                 unpaid: data.unpaid || { total: 30, taken: 0, available: 0, pending: 0 },
-                maternity: data.maternity || { total: 98, taken: 0, available: 0, pending: 0 },
-                paternity: data.paternity || { total: 15, taken: 0, available: 0, pending: 0 }
+                medical: data.medical || { total: 30, taken: 0, available: 0, pending: 0 },
+                // ✅ Only include if backend actually sends them
+                ...(data.maternity ? { maternity: data.maternity } : {}),
+                ...(data.paternity ? { paternity: data.paternity } : {})
             };
+
 
             console.log("✅ Leave balance loaded:", this.leaveBalance);
         } else {
@@ -147,21 +149,78 @@ class LeaveRequestForm {
 
 
     async checkCasualLeaveOverlap(fromDate, toDate) {
-    const payload = {
-        employee_number: this.employeeNumber,
-        request_date_from: fromDate,
-        request_date_to: toDate
-    };
+        const payload = {
+            employee_number: this.employeeNumber,
+            request_date_from: fromDate,
+            request_date_to: toDate
+        };
 
-    const res = await fetch('/api/check/leave/valid', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
+        // ✅ Use arrow function to preserve 'this'
+        const checkLeaveValid = async (payload) => {
+            try {
+                const res = await fetch('/api/check/leave/valid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-    const json = await res.json();
-    return json.result || { success: false, error: 'Unexpected server response' };
-}
+                let data;
+                try {
+                    data = await res.json();
+                } catch (err) {
+                    console.error('Error parsing JSON:', err);
+                    this.showNotification('Invalid server response', 'error');
+                    return { success: false, error: 'Invalid server response' };
+                }
+
+                const result = data?.result ?? null;
+                const rpcError = data?.error ?? null;
+
+                if (rpcError) {
+                    console.error('Odoo JSON-RPC error:', rpcError);
+                    this.showNotification(rpcError.message || 'Server error', 'error');
+                    return { success: false, error: rpcError.message || 'Server error' };
+                }
+
+                if (!result) {
+                    console.error('No result in API response:', data);
+                    this.showNotification('Invalid server response', 'error');
+                    return { success: false, error: 'Invalid server response' };
+                }
+
+                if (!result.success) {
+                    this.showNotification(result.error || 'Unknown error', 'error');
+
+                    const form = document.getElementById('leaveRequestForm');
+                    if (form) {
+                        form.querySelector('[name="request_date_from"]').value = "";
+                        form.querySelector('[name="request_date_to"]').value = "";
+                    }
+
+                    if (this.formData) {
+                        this.formData.request_date_from = null;
+                        this.formData.request_date_to = null;
+                        this.formData.number_of_days = 0;
+                    }
+
+                    const durationEl = document.getElementById('durationDisplay');
+                    if (durationEl) durationEl.style.display = 'none';
+
+                    return { success: false, error: result.error || 'Unknown error' };
+                }
+
+                return result;
+
+            } catch (err) {
+                console.error('Network or fetch error:', err);
+                this.showNotification('Network error', 'error');
+                return { success: false, error: 'Network error' };
+            }
+        };
+
+        // Call the arrow function
+        return await checkLeaveValid(payload);
+    }
 
     renderForm() {
         const container = document.getElementById('leave-request-app');
@@ -185,7 +244,7 @@ class LeaveRequestForm {
                                     <!-- Employee Number -->
                                     <div class="form-item">
                                         <label class="form-label">
-                                            <i class="fa-solid fa-address-card"></i> ID
+                                            <i class="fa fa-id-card-o"></i> ID
                                         </label>
                                         <input type="text" class="form-control" value="${this.employeeNumber}" readonly />
                                     </div>
@@ -381,7 +440,7 @@ class LeaveRequestForm {
 
                                     <!-- Dropdown -->
                                     <div id="half_day_options" style="display: none;">
-                                        <select id="half_day_type" name="half_day_type" required>
+                                        <select id="half_day_type" name="half_day_type">
                                             <option value="" disabled selected>-- Select Half Day --</option>
                                             <option value="morning">Morning</option>
                                             <option value="evening">Evening</option>
@@ -605,39 +664,70 @@ class LeaveRequestForm {
         const fromDateVal = form.querySelector('[name="request_date_from"]').value;
         const toDateVal = form.querySelector('[name="request_date_to"]').value;
         const isHalfDay = form.querySelector('[name="half_day"]').checked;
-        const halfDayType = document.getElementById('half_day_type')?.value || "";
-        console.log("DEBUG (calculateDuration) Half Day Type Selected:", halfDayType);
+
+        // Get half-day select element
+        const halfDaySelect = document.getElementById('half_day_type');
+        const halfDayType = halfDaySelect ? halfDaySelect.value : "";
+
+        console.log("DEBUG (calculateDuration) Half Day Checked:", isHalfDay, "Half Day Type:", halfDayType);
+
+        // Check dates
+        if (!fromDateVal || !toDateVal) {
+            this.formData.number_of_days = 0;
+            document.getElementById('durationDisplay').style.display = 'none';
+            return;
+        }
+
+        const from = new Date(fromDateVal);
+        const to = new Date(toDateVal);
+
+        if (to < from) {
+            // reset end date field to empty
+            form.querySelector('[name="request_date_to"]').value = "";
+
+            // reset values
+            this.formData.request_date_to = null;
+            this.formData.number_of_days = 0;
+
+            document.getElementById('durationDisplay').style.display = 'none';
+            this.showNotification("End date cannot be earlier than start date.", "error");
+
+            this.hasBlockingError = true;
+            return;
+        }
 
 
-        if (fromDateVal && toDateVal) {
-            const from = new Date(fromDateVal);
-            const to = new Date(toDateVal);
+        // Calculate total days
+        let totalDays = Math.floor((to - from) / (1000 * 60 * 60 * 24)) + 1;
 
-            if (to < from) {
-                this.formData.number_of_days = 0;
-                document.getElementById('durationDisplay').style.display = 'none';
-                this.showNotification("End date cannot be earlier than start date.", "error");
+        if (isHalfDay) {
+            if (!halfDaySelect) {
+                this.showNotification("Please select Morning or Evening for half-day leave.", "error");
                 this.hasBlockingError = true;
                 return;
             }
 
-            let totalDays = Math.floor((to - from) / (1000 * 60 * 60 * 24)) + 1;
-
-            if (isHalfDay) {
-                if (halfDayType === "morning" || halfDayType === "evening") {
-                    totalDays = 0.5;
-                } else {
-                    this.showNotification("Please select Morning or Evening for half-day leave.", "error");
-                    this.hasBlockingError = true;
-                    return; // stop here
-                }
+            if (halfDayType === "morning" || halfDayType === "evening") {
+                totalDays = 0.5;
+            } else {
+                this.showNotification("Please select Morning or Evening for half-day leave.", "error");
+                this.hasBlockingError = true;
+                return;
             }
-
-            this.formData.number_of_days = totalDays;
-            document.getElementById('durationDays').textContent = totalDays;
-            document.getElementById('durationDisplay').style.display = 'block';
         }
+
+        // Update formData and display
+        this.formData.number_of_days = totalDays;
+        const durationDisplay = document.getElementById('durationDisplay');
+        const durationDays = document.getElementById('durationDays');
+        if (durationDisplay && durationDays) {
+            durationDays.textContent = totalDays;
+            durationDisplay.style.display = 'block';
+        }
+
+        this.hasBlockingError = false; // Reset error
     }
+
 
 
 
@@ -744,16 +834,7 @@ class LeaveRequestForm {
                 this.showNotification(result.message || 'Leave request submitted successfully!', 'success');
 
                 setTimeout(() => {
-                    const leaveData = result.data || {};
-                    const params = new URLSearchParams({
-                        employee_name: leaveData.employee_name || this.employeeName,
-                        leave_type: leaveData.leave_type || this.formData.leaveTypeName,
-                        date_from: leaveData.date_from || this.formData.request_date_from,
-                        date_to: leaveData.date_to || this.formData.request_date_to,
-                        number_of_days: leaveData.number_of_days || this.formData.number_of_days,
-                        description: leaveData.description || ''
-                    });
-                    window.location.href = `/leave/success?${params.toString()}`;
+                    window.location.href = '/leave/success';
                 }, 1500);
             } else {
                 const errorMessage = result?.error || 'Failed to submit leave request';

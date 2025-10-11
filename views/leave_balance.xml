@@ -3,19 +3,21 @@
     <!-- Leave Balance Page Template -->
     <template id="leave_balance_page" name="Leave Balance">
         <head>
-            <title>Leave Balance - AGB Communication</title>
+            <title>Leave Balance</title>
             <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>    
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/leave_balance.css"/>
             <script type="text/javascript" src="/AGB_HR/static/src/js/leave_balance.js" defer="defer"/>
+            <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
         </head>
         <body>
             <div class="agb-app-container">
                 <!-- Sticky Top Navigation -->
                 <div class="agb-top-nav agb-sticky-header">
                     <h1 class="agb-nav-title">Leave Balance Overview</h1>
-                    <div class="agb-nav-actions">
+                     <div class="agb-nav-actions">
+                       
                         <button class="agb-btn agb-btn-link" onclick="window.location.href='/attendance/dashboard'">
                             <i class="fa fa-arrow-left"></i> Dashboard
                         </button>
@@ -33,7 +35,7 @@
                         <div class="agb-form-card agb-employee-info">
                             <div class="agb-form-header">
                                 <i class="fa fa-user"></i>
-                                <h3><t t-esc="employee.name"/>'s Leave Balance</h3>
+                                <h3><t t-esc="employee.name"/></h3>
                             </div>
                             <div class="agb-employee-details">
                                 <div class="agb-detail-item">
@@ -125,8 +127,8 @@
 
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
-                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Leave Management System</p>
+                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                 </div>
             </div>
 
@@ -152,6 +154,7 @@
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
             <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
             <script type="text/javascript" src="/AGB_HR/static/src/js/attendance_dashboard.js" defer="defer"/>
+            <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
         </head>
         <body>
             <div class="agb-app-container">
@@ -248,9 +251,9 @@
                 </div>
 
                 <!-- Sticky Footer -->
-                <div class="agb-footer agb-sticky-footer">
-                    <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Attendance System v1.0</p>
+               <div class="agb-footer agb-sticky-footer">
+                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                 </div>
             </div>
 

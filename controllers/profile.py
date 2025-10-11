@@ -3,7 +3,9 @@ from odoo.http import request
 import logging
 import base64, json
 from datetime import datetime 
+from datetime import date, timedelta
 _logger = logging.getLogger(__name__)
+
 
 class EmployeePortal(http.Controller):
 
@@ -79,15 +81,39 @@ class EmployeePortal(http.Controller):
     def employee_profile(self, **kwargs):
         employee_number = request.session.get('employee_number')
 
+        stats = request.session.get('attendance_stats', {})
+
+        _logger.info("Session Attendance Stats: %s", stats)
+
         if not employee_number:
             return request.redirect('/employee/register')
 
         employee = request.env['hr.employee'].sudo().browse(employee_number)
         if not employee.exists():
             return request.not_found()
+        
+        service_years = 0
+        service_months = 0
+        if employee.join_date:  # or use 'date_joined' / 'date_start' depending on your field
+            today = date.today()
+            delta = today - employee.join_date
+            service_years = delta.days // 365
+            service_months = (delta.days % 365) // 30
 
+        service_info = {
+            'years': service_years,
+            'months': service_months,
+            'formatted': f"{service_years} year(s) {service_months} month(s)"
+        }
+
+        # --- ✅ Store in session like attendance_stats ---
+        request.session['service_info'] = service_info
+        _logger.info("Service info stored in session: %s", service_info)
+        
         return request.render('AGB_HR.employee_profile_template', {
             'employee': employee,
+            'stats': stats,
+            'service_info': service_info,
         })
 
 
@@ -193,7 +219,7 @@ class EmployeePortal(http.Controller):
                 'error': f'Failed to update profile: {str(e)}'
             }
 
-    @http.route('/employee/update_profile_image', type='http', auth='user', methods=['POST'], csrf=True)
+    @http.route('/employee/update_profile_image', type='http', auth='public', methods=['POST'], csrf=False)
     def update_profile_image(self, **kwargs):
         file = request.httprequest.files.get('image')
         if not file:
@@ -203,29 +229,34 @@ class EmployeePortal(http.Controller):
             )
 
         emp_number = request.session.get('employee_number')
-        employee = request.env['hr.employee'].sudo().search([('id', '=', emp_number)], limit=1)
-        if not employee:
+        if not emp_number:
+            return request.make_response(
+                json.dumps({'success': False, 'error': 'Not logged in or session expired'}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
+        employee = request.env['hr.employee'].sudo().browse(emp_number)
+        if not employee.exists():
             return request.make_response(
                 json.dumps({'success': False, 'error': 'Employee record not found'}),
                 headers=[('Content-Type', 'application/json')]
             )
 
         try:
-            # Convert to base64 and write
             employee.sudo().write({'image_1920': base64.b64encode(file.read())})
+            image_url = f'/web/image/hr.employee/{employee.id}/image_1920'
+            return request.make_response(
+                json.dumps({'success': True, 'image_url': image_url}),
+                headers=[('Content-Type', 'application/json')]
+            )
         except Exception as e:
             return request.make_response(
-                json.dumps({'success': False, 'error': f'This file could not be decoded as an image file. ({str(e)})'}),
+                json.dumps({'success': False, 'error': str(e)}),
                 headers=[('Content-Type', 'application/json')]
             )
 
-        return request.make_response(
-            json.dumps({'success': True, 'image_url': f'/web/image/hr.employee/{employee.id}/image_1920'}),
-            headers=[('Content-Type', 'application/json')]
-        )
 
-
-    @http.route('/employee/remove_profile_image', type='http', auth='user', methods=['POST'], csrf=True)
+    @http.route('/employee/remove_profile_image', type='http', auth='public', methods=['POST'], csrf=False)
     def remove_profile_image(self, **kwargs):
         emp_number = request.session.get('employee_number')
         if not emp_number:
@@ -234,27 +265,27 @@ class EmployeePortal(http.Controller):
                 headers=[('Content-Type', 'application/json')]
             )
 
-        employee = request.env['hr.employee'].sudo().search([
-            ('id', '=', emp_number)
-        ], limit=1)
-
-        if not employee:
+        employee = request.env['hr.employee'].sudo().browse(emp_number)
+        if not employee.exists():
             return request.make_response(
                 json.dumps({'success': False, 'error': 'Employee record not found'}),
                 headers=[('Content-Type', 'application/json')]
             )
 
-        # Remove profile image
-        employee.sudo().write({'image_1920': False})
+        try:
+            # Remove profile image
+            employee.sudo().write({'image_1920': False})
 
-        return request.make_response(
-            json.dumps({'success': True, 'message': 'Profile image removed successfully'}),
-            headers=[('Content-Type', 'application/json')]
-        )
-
-    
-    # @http.route('/employee/congrats', type='http', auth='public', website=True)
-    # def employee_congrats(self, **kwargs):
-    #     return request.render('AGB_HR.congrats_template')
-
-    
+            return request.make_response(
+                json.dumps({
+                    'success': True,
+                    'message': 'Profile image removed successfully',
+                    'image_url': None
+                }),
+                headers=[('Content-Type', 'application/json')]
+            )
+        except Exception as e:
+            return request.make_response(
+                json.dumps({'success': False, 'error': str(e)}),
+                headers=[('Content-Type', 'application/json')]
+            )

@@ -89,8 +89,8 @@ body {
 
 /* State icons */
 .agb-status-icon {
-  width: 10px;
-  height: 10px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   display: inline-block;
 }
@@ -799,7 +799,6 @@ body {
   color: #991b1b !important;
 }
 
-/* NEW: Invalid half-day leave - red/yellow gradient (leave without required attendance) */
 .agb-calendar-invalid-half-leave {
   background: linear-gradient(135deg, #fef2f2 50%, #fef3c7 50%) !important;
   border-color: #ef4444 !important;
@@ -809,7 +808,6 @@ body {
 }
 
 .agb-calendar-invalid-half-leave::after {
-  content: '⚠';
   position: absolute;
   top: 2px;
   left: 4px;
@@ -822,7 +820,11 @@ body {
   color: #92400e !important;
 }
 
-/* FIXED: Improved half-leave styling with clear visual distinction */
+.agb-calendar-future-half-leave {
+    background: linear-gradient(135deg, rgb(255, 255, 255) 50%, #fef3c7 50%) !important;
+    border-color: #fbbf24 !important; /* blend of leave + green border */
+    color: #92400e; 
+}
 
 .agb-calendar-half-leave::before {
   content: 'H';
@@ -884,6 +886,8 @@ body {
   margin-bottom: 6px;
   line-height: 1;
   flex-shrink: 0;
+  position: relative;
+  z-index: 3;
 }
 
 /* ENHANCED: Attendance dots with support for dual green dots */

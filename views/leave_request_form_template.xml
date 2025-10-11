@@ -5,7 +5,7 @@
         <template id="leave_request_form_template" name="Leave Request Form">
             <head>
                 <title>Leave Request - AGB Communication</title>
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>  
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>   
                 <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
                 <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/leave_request.css"/>
                 <script type="text/javascript" src="/AGB_HR/static/src/js/leave_request.js"/>
@@ -18,6 +18,7 @@
                     <div class="agb-top-nav agb-sticky-header">
                         <h1 class="agb-nav-title">Leave Request</h1>
                         <div class="agb-nav-actions">
+                        
                             <button class="agb-btn agb-btn-link" onclick="window.location.href='/attendance/dashboard'">
                                 <i class="fa fa-arrow-left"></i> Dashboard
                             </button>
@@ -46,8 +47,8 @@
 
                     <!-- Sticky Footer -->
                     <div class="agb-footer agb-sticky-footer">
-                        <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                        <p>Secure Employee Portal • Leave Management System</p>
+                        <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                        <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                     </div>
                 </div>
             </body>
@@ -184,8 +185,8 @@
 
                     <!-- Sticky Footer -->
                     <div class="agb-footer agb-sticky-footer">
-                        <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                        <p>Secure Employee Portal • Leave Management System</p>
+                        <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+                        <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
                     </div>
                 </div>
             </body>

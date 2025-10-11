@@ -153,7 +153,7 @@ function setupPersonalEditForm(modalTitle, editFields) {
                 <i class="fa fa-id-card"></i>
                 NRC Number
             </label>
-            <input type="text" name="nrc_full" class="agb-input" 
+            <input type="text" name="nrc_full" class="agb-input" disabled
                    value="${getEmployeeData('nrc_full')}" 
                    placeholder="e.g., 12/KAMANA(N)123456"/>
         </div>
@@ -285,29 +285,29 @@ function setupEducationEditForm(modalTitle, editFields) {
 /**
  * Setup work information edit form
  */
-function setupWorkEditForm(modalTitle, editFields) {
-    modalTitle.textContent = 'Edit Work Information';
-    editFields.innerHTML = `
-        <div class="agb-form-group">
-            <label class="agb-label">
-                <i class="fa fa-briefcase"></i>
-                Job Title
-            </label>
-            <input type="text" name="job_title" class="agb-input" 
-                   value="${getEmployeeData('job_title')}" 
-                   placeholder="e.g., Senior Software Developer"/>
-        </div>
-        <div class="agb-form-group">
-            <label class="agb-label">
-                <i class="fa fa-envelope"></i>
-                Work Email
-            </label>
-            <input type="email" name="work_email" class="agb-input" 
-                   value="${getEmployeeData('work_email')}" 
-                   placeholder="your.name@agb.com.mm"/>
-        </div>
-    `;
-}
+// function setupWorkEditForm(modalTitle, editFields) {
+//     modalTitle.textContent = 'Edit Work Information';
+//     editFields.innerHTML = `
+//         <div class="agb-form-group">
+//             <label class="agb-label">
+//                 <i class="fa fa-briefcase"></i>
+//                 Job Title
+//             </label>
+//             <input type="text" name="job_title" class="agb-input" 
+//                    value="${getEmployeeData('job_title')}" 
+//                    placeholder="e.g., Senior Software Developer"/>
+//         </div>
+//         <div class="agb-form-group">
+//             <label class="agb-label">
+//                 <i class="fa fa-envelope"></i>
+//                 Work Email
+//             </label>
+//             <input type="email" name="work_email" class="agb-input" 
+//                    value="${getEmployeeData('work_email')}" 
+//                    placeholder="your.name@agb.com.mm"/>
+//         </div>
+//     `;
+// }
 
 /**
  * Get employee data from the page
