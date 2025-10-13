@@ -163,6 +163,31 @@
   font-style: italic;
 }
 
+.agb-password-container {
+  position: relative;
+}
+
+.agb-password-container input {
+  width: 100%;
+  padding-right: 40px; /* room for the eye icon */
+}
+
+.agb-toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: #777;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.agb-toggle-password:hover {
+  color: #333;
+}
+
+
 /* Buttons */
 .agb-btn {
   width: 100%;

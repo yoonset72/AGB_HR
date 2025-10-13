@@ -297,15 +297,16 @@
                     </div>
                   </div>
                   
-                  <div class="agb-section-divider">
+                  <!-- <div class="agb-section-divider">
                     <h4><i class="fa fa-cog"></i> Account Settings</h4>
                   </div>
                   
                   <div class="agb-settings-actions">
-                    <button class="agb-btn agb-btn-outline" onclick="changePassword()">
-                      <i class="fa fa-lock"></i> Change Password
-                    </button>
-                  </div>
+                      <button type="button" class="agb-btn agb-btn-outline" onclick="changePassword()">
+                          <i class="fa fa-lock"></i> Change Password
+                      </button>
+                  </div> -->
+
                 </div>
               </div>
             </div>

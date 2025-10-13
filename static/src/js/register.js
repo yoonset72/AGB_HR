@@ -22,6 +22,21 @@ function triggerForgotPassword() {
     form.submit();
 }
 
+function togglePassword(icon) {
+    const input = icon.previousElementSibling;
+
+    if (input.type === "password") {
+        input.type = "text";
+        icon.classList.remove("fa-eye-slash");
+        icon.classList.add("fa-eye");
+    } else {
+        input.type = "password";
+        icon.classList.remove("fa-eye");
+        icon.classList.add("fa-eye-slash");
+    }
+}
+
+
 document.addEventListener("DOMContentLoaded", function() {
     const passwordFields = document.querySelectorAll('input[type="password"]');
 

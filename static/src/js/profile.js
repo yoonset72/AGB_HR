@@ -896,16 +896,27 @@ function showRemoveButton(show) {
 /**
  * Change password functionality
  */
-function changePassword() {
-    const employeeNumberElement = document.querySelector('[data-field="employee_number"]');
-    const employeeNumber = employeeNumberElement ? employeeNumberElement.textContent.trim() : null;
+// function changePassword() {
+//     // Fetch secure token
+//     fetch('/employee/get_token', {
+//         method: 'GET',
+//         headers: { 'X-Requested-With': 'XMLHttpRequest' }
+//     })
+//     .then(res => res.json())
+//     .then(data => {
+//         if (data.token) {
+//             // Redirect to change password page with token (GET)
+//             window.location.href = `/employee/change_password?token=${data.token}`;
+//         } else {
+//             showToast('Error', 'Unable to get secure access token.', 'error');
+//         }
+//     })
+//     .catch(err => {
+//         console.error(err);
+//         showToast('Error', 'Failed to initiate password change.', 'error');
+//     });
+// }
 
-    if (employeeNumber) {
-        window.location.href = `/employee/register?forgot=1`;
-    } else {
-        alert("Employee ID not found.");
-    }
-}
 
 /**
  * Setup settings button listeners

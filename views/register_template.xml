@@ -68,13 +68,14 @@
                   <i class="fa fa-lock"></i>
                   Password
                 </label>
-                <input type="password" 
-                      name="password" 
-                      class="agb-input" 
-                      placeholder="Enter your password"
-                      required="required"
-                      pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
-                      title="Password must be at least 8 characters long, with uppercase, lowercase, and a number"/>
+                <div class="agb-password-container">
+                    <input type="password" name="password" class="agb-input"
+                          placeholder="Enter your password"
+                          required="required"
+                          pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
+                          title="Password must be at least 8 characters long, with uppercase, lowercase, and a number"/>
+                    <i class="fa fa-eye-slash agb-toggle-password" onclick="togglePassword(this)"></i>
+                  </div>
                 <small class="agb-help-text">Password must be at least 8 characters, with uppercase, lowercase, and a number</small>
 
               </div>
@@ -100,20 +101,21 @@
               <input type="hidden" name="employee_number" t-att-value="employee_number"/>
               <input type="hidden" name="forgot" value="1"/>
               
-              <div class="agb-form-group">
+              <div class="agb-form-group password-wrapper">
                 <label class="agb-label">
                   <i class="fa fa-lock"></i>
                   New Password
                 </label>
-                <input type="password" 
-                  name="new_password" 
-                  class="agb-input" 
-                  placeholder="Enter your new secure password"
-                  required="required"
-                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
-                  title="Password must be at least 8 characters long, with uppercase, lowercase, and a number"/>
-
+                <div class="agb-password-container">
+                  <input type="password" name="new_password" class="agb-input"
+                        placeholder="Enter your new secure password"
+                        required="required"
+                        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
+                        title="Password must be at least 8 characters long, with uppercase, lowercase, and a number"/>
+                  <i class="fa fa-eye-slash agb-toggle-password" onclick="togglePassword(this)"></i>
+                </div>
               </div>
+
 
               <button type="submit" class="agb-btn agb-btn-success">
                 <i class="fa fa-refresh"></i>
@@ -163,4 +165,3 @@
     </body> 
   </template>
 </odoo>
-
