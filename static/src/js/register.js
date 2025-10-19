@@ -21,3 +21,31 @@ function triggerForgotPassword() {
     document.body.appendChild(form);
     form.submit();
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+    const passwordFields = document.querySelectorAll('input[type="password"]');
+
+    passwordFields.forEach(field => {
+        field.addEventListener("input", function() {
+            const value = field.value;
+            let message = "";
+
+            if (value.length < 8) {
+                message = "Password must be at least 8 characters.";
+            } else if (!/[A-Z]/.test(value)) {
+                message = "Password must include at least one uppercase letter.";
+            } else if (!/[a-z]/.test(value)) {
+                message = "Password must include at least one lowercase letter.";
+            } else if (!/[0-9]/.test(value)) {
+                message = "Password must include at least one number.";
+            }
+
+            const helpText = field.nextElementSibling;
+            if (helpText && helpText.classList.contains("agb-help-text")) {
+                helpText.textContent = message || "Strong password ✔";
+                helpText.style.color = message ? "red" : "green";
+            }
+        });
+    });
+});
+

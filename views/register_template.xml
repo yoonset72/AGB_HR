@@ -9,15 +9,17 @@
     <body>
       <div class="agb-container">
         <!-- Company Header -->
-        <div class="agb-header">
-          <div class="agb-logo">
-            <img src="/AGB_HR/static/src/img/logo.png" alt="AGB Communication Logo" class="agb-logo-img"/>
-          </div>
-          <h1 class="agb-company-name">AGB Communication</h1>
-          <p class="agb-company-subtitle">Myanmar • Employee Portal</p>
-          <div class="agb-contact-info">
-            <span><i class="fa fa-phone"></i> +959-765492075</span>
-            <span><i class="fa fa-envelope"></i> hr@agbcommunication.com</span>
+        <div class="agb-header-wrapper">
+          <div class="agb-header">
+            <div class="agb-logo">
+              <img src="/AGB_HR/static/src/img/logo.png" alt="AGB Communication Logo" class="agb-logo-img"/>
+            </div>
+            <h1 class="agb-company-name">AGB Communication</h1>
+            <p class="agb-company-subtitle">Myanmar • Employee Portal</p>
+            <div class="agb-contact-info">
+              <span><i class="fa fa-phone"></i> +959-765492075</span>
+              <span><i class="fa fa-envelope"></i> hr@agbcommunication.com</span>
+            </div>
           </div>
         </div>
 
@@ -66,11 +68,14 @@
                   Password
                 </label>
                 <input type="password" 
-                       name="password" 
-                       class="agb-input" 
-                       placeholder="Enter your password"
-                       required="required"/>
-                <small class="agb-help-text">Enter your secure password</small>
+                      name="password" 
+                      class="agb-input" 
+                      placeholder="Enter your password"
+                      required="required"
+                      pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
+                      title="Password must be at least 8 characters long, with uppercase, lowercase, and a number"/>
+                <small class="agb-help-text">Password must be at least 8 characters, with uppercase, lowercase, and a number</small>
+
               </div>
 
               <button type="submit" class="agb-btn agb-btn-primary">
@@ -100,11 +105,13 @@
                   New Password
                 </label>
                 <input type="password" 
-                       name="new_password" 
-                       class="agb-input" 
-                       placeholder="Enter your new secure password"
-                       required="required"/>
-                <small class="agb-help-text">Choose a strong password with at least 8 characters</small>
+                  name="new_password" 
+                  class="agb-input" 
+                  placeholder="Enter your new secure password"
+                  required="required"
+                  pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
+                  title="Password must be at least 8 characters long, with uppercase, lowercase, and a number"/>
+
               </div>
 
               <button type="submit" class="agb-btn agb-btn-success">
@@ -145,9 +152,11 @@
         </div>
 
         <!-- Footer -->
-        <div class="agb-footer">
-          <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-          <p>Secure Employee Portal • Version 2.0</p>
+        <div class="agb-footer-wrapper">
+          <div class="agb-footer">
+            <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
+            <p>Secure Employee Portal • Version 2.0</p>
+          </div>
         </div>
       </div>
     </body> 

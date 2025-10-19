@@ -1,271 +1,346 @@
-// Leave Balance JavaScript - Updated Grid Design
-
-// Global variables
-let employeeData = {};
-let leaveBalanceData = {};
-
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Leave Balance Dashboard loaded');
+// ENHANCED: JavaScript with public holiday support, weekend work, and improved modal handling
+function showDayDetails(element) {
+    // Check if day is clickable - block full absent and future non-leave days
+    const isFuture = element.classList.contains('agb-calendar-future');
+    const isFullAbsent = element.getAttribute('data-status') === 'full_absent';
     
-    // Get employee data from window object (set by template)
-    if (window.employeeData) {
-        employeeData = window.employeeData;
-        console.log('Employee data loaded:', employeeData);
-        loadLeaveBalances();
-    } else {
-        console.error('Employee data not found');
-        showError('Employee data not available');
+    if (element.classList.contains('agb-calendar-public-holiday') ||
+        isFullAbsent ||
+        (isFuture && !isLeave)) {
+        return; // Don't show modal for non-clickable days
     }
+
+    const modal = document.getElementById('day-details-modal');
+    const dateElement = document.getElementById('modal-date');
+
+    // All sections
+    const attendanceSection = modal.querySelector('.attendance-section');
+    const leaveSection = modal.querySelector('.leave-section');
+    const publicHolidaySection = modal.querySelector('.public-holiday-section');
+
+    // Attendance fields
+    const shiftElement = document.getElementById('modal-shift');
+    const checkinElement = document.getElementById('modal-checkin');
+    const checkoutElement = document.getElementById('modal-checkout');
+    const lateElement = document.getElementById('modal-late');
+    const statusElement = document.getElementById('modal-status');
+    const attendanceElement = document.getElementById('modal-attendance');
+
+    // Leave fields
+    const leaveTypeElement = document.getElementById('modal-leave-type');
+    const leaveFromElement = document.getElementById('modal-leave-from');
+    const leaveToElement = document.getElementById('modal-leave-to');
+    const leaveDurationElement = document.getElementById('modal-leave-duration');
+    const leaveHalfDayTypeElement = document.getElementById('modal-leave-half-day-type');
+    console.log('Half Day Type Element:', leaveHalfDayTypeElement)
+    const leaveReasonElement = document.getElementById('modal-leave-reason');
+    const leaveApprover1Element = document.getElementById('modal-leave-approver1');
+    const leaveApprover2Element = document.getElementById('modal-leave-approver2');
+    const leaveStateElement = document.getElementById('modal-leave-state');
+
     
-    // Add touch device detection
-    if ('ontouchstart' in window) {
-        document.body.classList.add('touch-device');
-    }
-});
+    // Holiday fields
+    const holidayNameElement = document.getElementById('modal-holiday-name');
 
-// Load leave balances from API
-async function loadLeaveBalances() {
-    try {
-        showLoading(true);
-        
-        const response = await fetch('/api/leave-balance', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                employee_number: employeeData.employee_number
-            })
-        });
+    const date = element.getAttribute('data-date');
+    const isLeave = element.getAttribute('data-leave') === '1';
+    const isHalfLeave = element.getAttribute('data-is-half-leave') === '1';
+    const hasAttendance = element.getAttribute('data-has-attendance') === '1';
+    const isWeekend = element.getAttribute('data-is-weekend') === '1';
+    const hasCheckIn = element.getAttribute('data-has-check-in') === '1';
+    const hasCheckOut = element.getAttribute('data-has-check-out') === '1';
+    const working_hours = element.getAttribute("data-working-hours");
+    const isPublicHoliday = element.getAttribute('data-is-public-holiday') === '1';
+    const holidayName = element.getAttribute('data-holiday-name') || '';
+    const isInvalidHalfLeave = element.getAttribute('data-is-invalid-half-leave') === '1';
+    const status = element.getAttribute('data-status');
 
-        const data = await response.json();
-        console.log('Leave balance API response:', data);
+    if (dateElement) dateElement.textContent = date;
 
-        // Handle JSON-RPC response structure
-        let responseData = data;
-        if (data.result) {
-            responseData = data.result;
+    // Reset all sections
+    if (attendanceSection) attendanceSection.style.display = 'none';
+    if (leaveSection) leaveSection.style.display = 'none';
+    if (publicHolidaySection) publicHolidaySection.style.display = 'none';
+
+    // --- Public Holiday Handling ---
+    if (isPublicHoliday) {
+        if (publicHolidaySection) {
+            publicHolidaySection.style.display = 'block';
+            if (holidayNameElement) holidayNameElement.textContent = holidayName;
         }
-        
-        if (responseData.success) {
-            leaveBalanceData = responseData;
-            renderLeaveBalances(responseData);
-        } else {
-            throw new Error(responseData.error || 'Failed to load leave balances');
-        }
-
-    } catch (error) {
-        console.error('Error loading leave balances:', error);
-        showError(error.message);
-    } finally {
-        showLoading(false);
-    }
-}
-
-// Render leave balance cards with new design
-function renderLeaveBalances(data) {
-    const grid = document.getElementById('leave-balance-grid');
-    if (!grid) {
-        console.error('Balance grid not found');
+        // Don't show attendance or leave sections for public holidays
+        if (modal) modal.classList.add('show');
         return;
     }
 
-    // Clear loading state
-    grid.innerHTML = '';
+    // --- Leave Handling ---
+    if (isLeave) {
+        if (leaveSection) leaveSection.style.display = 'block';
 
-    // Define leave types with their display information
-    const leaveTypes = [
-        { key: 'annual', name: 'Annual Leave', icon: 'fa-calendar-check', class: 'annual' },
-        { key: 'casual', name: 'Casual Leave', icon: 'fa-coffee', class: 'casual' },
-        { key: 'medical', name: 'Medical Leave', icon: 'fa-medkit', class: 'medical' },
-        { key: 'funeral', name: 'Funeral Leave', icon: 'fa-heart', class: 'funeral' },
-        { key: 'marriage', name: 'Marriage Leave', icon: 'fa-heart-o', class: 'marriage' },
-        { key: 'unpaid', name: 'Unpaid Leave', icon: 'fa-clock-o', class: 'unpaid' },
-        { key: 'sick', name: 'Sick Leave', icon: 'fa-user-md', class: 'sick' },
-        { key: 'maternity', name: 'Maternity Leave', icon: 'fa-female', class: 'maternity' },
-        { key: 'paternity', name: 'Paternity Leave', icon: 'fa-male', class: 'paternity' }
-    ];
+        if (leaveTypeElement) leaveTypeElement.textContent = element.getAttribute('data-leave-name') || '';
+        if (leaveFromElement) leaveFromElement.textContent = element.getAttribute('data-leave-from') || '';
+        if (leaveToElement) leaveToElement.textContent = element.getAttribute('data-leave-to') || '';
+        if (leaveDurationElement) {
+            let duration = element.getAttribute('data-leave-duration') || '';
+            let halfDayType = element.getAttribute('data-leave-half-day-type') || '';
 
-    let hasData = false;
+            if (halfDayType === 'am') halfDayType = 'Morning';
+            else if (halfDayType === 'pm') halfDayType = 'Afternoon';
+            else halfDayType = ''; // treat 'None' or empty as empty
 
-    leaveTypes.forEach((leaveType, index) => {
-        const leaveData = data[leaveType.key];
-        
-        // Only render if there's meaningful data (total > 0 or taken > 0 or pending > 0)
-        if (leaveData && (leaveData.total > 0 || leaveData.taken > 0 || leaveData.pending > 0)) {
-            hasData = true;
-            
-            const card = createBalanceCard(leaveType, leaveData, index);
-            grid.appendChild(card);
+            // Combine duration and half-day type in one span
+            leaveDurationElement.textContent = halfDayType ? `${duration} (${halfDayType})` : duration;
         }
-    });
 
-    // Show no data message if no leave types have data
-    if (!hasData) {
-        showNoData();
+        if (leaveReasonElement) leaveReasonElement.textContent = element.getAttribute('data-leave-reason') || '';
+        if (leaveApprover1Element) leaveApprover1Element.textContent = element.getAttribute('data-first-approver') || '';
+        if (leaveApprover2Element) leaveApprover2Element.textContent = element.getAttribute('data-second-approver') || '';
+
+        // Leave state mapping
+        const rawState = element.getAttribute('data-leave-state') || '';
+        let displayState = '';
+        let stateColor = '';
+
+        switch (rawState) {
+            case 'confirm':
+                displayState = isWeekend ? 'Pending' : 'Pending';
+                stateColor = '#FFA500';
+                break;
+            case 'validate':
+                displayState = isWeekend ? 'Approved' : 'Approved';
+                stateColor = '#28a745';
+                break;
+            case 'validate1':
+                displayState = isWeekend ? 'Wait for 2nd Approval' : 'Wait for 2nd Approval';
+                stateColor = '#FFD700';
+                break;
+            default:
+                displayState = rawState || 'Unknown';
+                stateColor = '#6c757d';
+        }
+
+        if (leaveStateElement) {
+            leaveStateElement.textContent = displayState;
+            leaveStateElement.style.backgroundColor = stateColor;
+            leaveStateElement.style.color = '#fff';
+            leaveStateElement.style.padding = '2px 6px';
+            leaveStateElement.style.borderRadius = '20px';
+            leaveStateElement.style.display = 'inline-block';
+        }
+
+
+        // Show attendance section for partial leave (leave with attendance)
+        if (hasAttendance) {
+            if (attendanceSection) attendanceSection.style.display = 'block';
+
+            // Add section divider if not exists
+            if (!attendanceSection.querySelector('.section-divider')) {
+                const divider = document.createElement('div');
+                divider.className = 'section-divider agb-modal-section-header';
+                // divider.textContent = isWeekend ? 'Weekend Attendance Information' : 'Attendance Information';
+                attendanceSection.insertBefore(divider, attendanceSection.firstChild);
+            }
+        }
+
+        // Add section divider for leave if not exists
+        if (!leaveSection.querySelector('.section-divider')) {
+            const divider = document.createElement('div');
+            divider.className = 'section-divider agb-modal-section-header';
+            // divider.textContent = isWeekend ? 'Weekend Leave Information' : 'Leave Information';
+            leaveSection.insertBefore(divider, leaveSection.firstChild);
+        }
+
+    } else {
+        // No leave - show attendance section if has attendance
+        if (attendanceSection) attendanceSection.style.display = hasAttendance ? 'block' : 'none';
     }
-}
 
-// Create individual balance card with new design
-function createBalanceCard(leaveType, leaveData, index) {
-    const card = document.createElement('div');
-    card.className = `agb-balance-card agb-balance-${leaveType.class}`;
-    card.style.animationDelay = `${index * 0.1}s`;
+    // --- Attendance Handling ---
+    if (attendanceSection && attendanceSection.style.display !== 'none') {
+        const checkin = element.getAttribute('data-checkin');
+        const checkout = element.getAttribute('data-checkout');
+        const late = element.getAttribute('data-late');
+        const shift = element.getAttribute('data-shift');
+        const attendanceFraction = parseFloat(element.getAttribute('data-attendance-fraction') || '0');
 
-    // Extract data values
-    const total = leaveData.total_dynamic || leaveData.total || 0;
-    const taken = leaveData.taken || 0;
-    const balance = leaveData.available || leaveData.balance || 0;
-    const pending = leaveData.pending || 0;
-
-    // Create card HTML with new design
-    card.innerHTML = `
-        <div class="agb-balance-card-header">
-            <div class="agb-balance-title-section">
-                <h3 class="agb-balance-title">${leaveType.name}</h3>
-            </div>
-            <div class="agb-balance-total-badge">
-                <span class="agb-total-label">Total:</span>
-                <span class="agb-total-value">${formatNumber(total)}</span>
-            </div>
-        </div>
+        // ENHANCED: Status determination based on attendance and leave
+        let displayStatus = '';
         
-        <div class="agb-balance-metrics-grid">
-            <div class="agb-metric-box agb-metric-taken">
-                <div class="agb-metric-value">${formatNumber(taken)}</div>
-                <div class="agb-metric-label">Taken</div>
-            </div>
-            <div class="agb-metric-box agb-metric-balance">
-                <div class="agb-metric-value">${formatNumber(balance)}</div>
-                <div class="agb-metric-label">Balance</div>
-            </div>
-            <div class="agb-metric-box agb-metric-pending">
-                <div class="agb-metric-value">${formatNumber(pending)}</div>
-                <div class="agb-metric-label">Pending</div>
-            </div>
-        </div>
-    `;
-
-    // Add click interactions
-    addCardInteractions(card, leaveType, leaveData);
-
-    return card;
-}
-
-// Add interactions to cards
-function addCardInteractions(card, leaveType, leaveData) {
-    // Add hover effects
-    card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-2px)';
-    });
-
-    card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0)';
-    });
-
-    // Add click handler for detailed view
-    card.addEventListener('click', function() {
-        showLeaveDetail(leaveType, leaveData);
-    });
-
-    // Add keyboard navigation
-    card.setAttribute('tabindex', '0');
-    card.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            showLeaveDetail(leaveType, leaveData);
-        }
-    });
-}
-
-// Show detailed leave information
-function showLeaveDetail(leaveType, leaveData) {
-    console.log('Showing detail for:', leaveType.name, leaveData);
-    
-    // You can implement a modal or detailed view here
-    // For now, just log the information
-    alert(`${leaveType.name} Details:\nTotal: ${leaveData.total || 0}\nTaken: ${leaveData.taken || 0}\nBalance: ${leaveData.available || leaveData.balance || 0}\nPending: ${leaveData.pending || 0}`);
-}
-
-// Utility function to format numbers
-function formatNumber(num) {
-    if (num === null || num === undefined) return '0';
-    return parseInt(num).toString();
-}
-
-// Show loading state
-function showLoading(show) {
-    const loadingElement = document.getElementById('leave-balance-loading');
-    const gridElement = document.getElementById('leave-balance-grid');
-    
-    if (loadingElement && gridElement) {
-        if (show) {
-            loadingElement.style.display = 'flex';
-            gridElement.style.display = 'none';
+        if (isLeave && hasAttendance) {
+            displayStatus = 'Partial Leave + Attendance';
+        } else if (hasCheckIn && hasCheckOut && working_hours >= 8) {
+            displayStatus = 'Present - Full Day';
+        } else if (hasCheckIn && hasCheckOut && working_hours <= 4) {
+            displayStatus = 'Present - Half Day';
+        } else if (hasCheckIn && !hasCheckOut) {
+            displayStatus = 'Partial - Check Out Missing';
+        } else if (!hasCheckIn && hasCheckOut) {
+            displayStatus = 'Partial - Check In Missing';
+        } else if (status === 'partial_absent') {
+            displayStatus = 'Partial Absent';
         } else {
-            loadingElement.style.display = 'none';
-            gridElement.style.display = 'grid';
+            displayStatus = 'Present';
+        }
+
+        if (shiftElement) shiftElement.textContent = shift || 'Not Assigned';
+        if (checkinElement) checkinElement.textContent = checkin || 'Not recorded';
+        if (checkoutElement) checkoutElement.textContent = checkout || 'Not recorded';
+        if (lateElement) lateElement.textContent = (late || 0) + ' minutes';
+        if (attendanceElement) attendanceElement.textContent = attendanceFraction.toFixed(1);
+
+        if (statusElement && displayStatus) {
+            statusElement.textContent = displayStatus;
+            
+            // Set appropriate CSS class based on status
+            let statusClass = 'agb-status-badge ';
+            if (displayStatus.includes('Full Day')) {
+                statusClass += 'agb-status-present';
+            } else if (displayStatus.includes('Partial')) {
+                statusClass += 'agb-status-partial';
+            } else {
+                statusClass += 'agb-status-present';
+            }
+            statusElement.className = statusClass;
         }
     }
+
+    if (modal) modal.classList.add('show');
 }
 
-// Show error message
-function showError(message) {
-    console.error('Error:', message);
-    const grid = document.getElementById('leave-balance-grid');
-    if (grid) {
-        grid.innerHTML = `
-            <div class="agb-loading-card">
-                <i class="fa fa-exclamation-triangle"></i>
-                <p>Error: ${message}</p>
-                <button onclick="loadLeaveBalances()" class="agb-btn agb-btn-primary" style="margin-top: 16px;">
-                    <i class="fa fa-refresh"></i> Retry
-                </button>
-            </div>
-        `;
-    }
+
+// --- Close Modal ---
+function closeDayDetails() {
+    const modal = document.getElementById('day-details-modal');
+    if (modal) modal.classList.remove('show');
 }
 
-// Show no data message
-function showNoData() {
-    const grid = document.getElementById('leave-balance-grid');
-    if (grid) {
-        grid.innerHTML = `
-            <div class="agb-loading-card">
-                <i class="fa fa-info-circle"></i>
-                <p>No leave balance data available.</p>
-                <p style="margin-top: 8px; font-size: 14px; color: #9ca3af;">Please contact HR for more information.</p>
-            </div>
-        `;
-    }
+function showLeaveNotification() {
+    showNotification('Leave management feature coming soon!', 'info');
 }
 
-// Refresh data
-function refreshLeaveBalances() {
-    console.log('Refreshing leave balances...');
-    loadLeaveBalances();
+// --- Notifications ---
+function showNotification(message, type = 'info') {
+    const container = document.getElementById('notification-container') || createNotificationContainer();
+    const notification = document.createElement('div');
+    notification.className = `agb-notification ${type}`;
+    notification.textContent = message;
+    container.appendChild(notification);
+
+    setTimeout(() => notification.classList.add('show'), 100);
+
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) notification.parentNode.removeChild(notification);
+        }, 300);
+    }, 3000);
 }
 
-// Export functions for external use
-window.leaveBalanceFunctions = {
-    refresh: refreshLeaveBalances,
-    showDetail: showLeaveDetail,
-    formatNumber: formatNumber
-};
+function createNotificationContainer() {
+    const container = document.createElement('div');
+    container.id = 'notification-container';
+    container.className = 'agb-notification-container';
+    document.body.appendChild(container);
+    return container;
+}
 
-// Handle page visibility changes to refresh data when page becomes visible
-document.addEventListener('visibilitychange', function() {
-    if (!document.hidden && employeeData.employee_number) {
-        // Refresh data when page becomes visible again
-        setTimeout(refreshLeaveBalances, 1000);
+// --- Modal Events ---
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('day-details-modal');
+    if (modal && event.target === modal) closeDayDetails();
+});
+
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') closeDayDetails();
+});
+
+function toggleProfileMenu() {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) dropdown.classList.toggle('hidden');
+}
+
+document.addEventListener('click', function(event) {
+    const menu = document.querySelector('.agb-profile-menu');
+    if (menu && !menu.contains(event.target)) {
+        const dropdown = document.getElementById('profile-dropdown');
+        if (dropdown) dropdown.classList.add('hidden');
     }
 });
 
-// Handle browser back/forward navigation
-window.addEventListener('pageshow', function(event) {
-    if (event.persisted) {
-        // Page was loaded from cache, refresh data
-        refreshLeaveBalances();
-    }
+window.toggleProfileMenu = toggleProfileMenu;
+
+// --- Init ---
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('AGB Attendance Dashboard loaded - Enhanced with Public Holidays & Weekend Work');
+    if ('ontouchstart' in window) document.body.classList.add('touch-device');
 });
+
+// --- Utils ---
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('en-US', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+}
+
+function calculateWorkingHours(checkin, checkout) {
+    if (!checkin || !checkout) return 0;
+    const diffMs = new Date('1970-01-01 ' + checkout) - new Date('1970-01-01 ' + checkin);
+    return Math.max(0, diffMs / (1000 * 60 * 60));
+}
+
+// --- Pull-to-Refresh (Mobile) ---
+(function() {
+    let startY = 0, currentY = 0, isPulling = false;
+    const threshold = 60;
+    let refreshIcon = document.getElementById('pull-refresh-icon');
+    if (!refreshIcon) {
+        refreshIcon = document.createElement('div');
+        refreshIcon.id = 'pull-refresh-icon';
+        refreshIcon.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+        document.body.appendChild(refreshIcon);
+    }
+
+    function touchStartHandler(e) {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].clientY;
+            isPulling = true;
+            refreshIcon.style.top = '20px';
+            refreshIcon.style.opacity = '0';
+        }
+    }
+
+    function touchMoveHandler(e) {
+        if (!isPulling) return;
+        currentY = e.touches[0].clientY;
+        let deltaY = currentY - startY;
+
+        if (deltaY > 0) {
+            refreshIcon.style.display = 'block';
+            refreshIcon.style.top = `${20 + deltaY / 2}px`;
+            refreshIcon.style.opacity = Math.min(deltaY / threshold, 1);
+            refreshIcon.classList.toggle('ready', deltaY > threshold);
+        }
+    }
+
+    function touchEndHandler() {
+        if (!isPulling) return;
+        let deltaY = currentY - startY;
+        if (deltaY > threshold) {
+            refreshIcon.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+            setTimeout(() => window.location.reload(), 200);
+        } else {
+            refreshIcon.style.display = 'none';
+        }
+        isPulling = false;
+    }
+
+    document.addEventListener('touchstart', touchStartHandler, { passive: true });
+    document.addEventListener('touchmove', touchMoveHandler, { passive: true });
+    document.addEventListener('touchend', touchEndHandler);
+})();
+
+// --- Export ---
+window.showDayDetails = showDayDetails;
+window.closeDayDetails = closeDayDetails;
+window.showLeaveNotification = showLeaveNotification;
+window.showNotification = showNotification;

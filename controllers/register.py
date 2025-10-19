@@ -3,8 +3,13 @@ from odoo.http import request
 import logging
 import uuid
 import json
+import time
 
 _logger = logging.getLogger(__name__)
+
+MAX_ATTEMPTS = 5
+BLOCK_TIME = 300  # 5 minutes
+
 
 class EmployeePortal(http.Controller):
 
@@ -12,7 +17,19 @@ class EmployeePortal(http.Controller):
     def employee_register(self, **kwargs):
         _logger.info("Rendering employee register: %s", kwargs)
 
-        # Auto-redirect if already logged in
+        # Track login attempts
+        attempts = request.session.get('login_attempts', 0)
+        last_attempt = request.session.get('last_attempt', 0)
+        now = time.time()
+
+        if attempts >= MAX_ATTEMPTS and (now - last_attempt) < BLOCK_TIME:
+            return request.render('AGB_HR.register_template', {
+                'error': 'Too many failed attempts. Please try again later.',
+                'employee_number': kwargs.get('employee_number', ''),
+                'forgot': False,
+            })
+
+        # Already logged in → redirect
         if request.session.get('employee_number'):
             return request.redirect('/attendance/dashboard')
 
@@ -24,6 +41,7 @@ class EmployeePortal(http.Controller):
 
             employee = request.env['hr.employee'].sudo().search(
                 [('employee_number', '=', emp_id)], limit=1)
+
             if not employee:
                 return request.render('AGB_HR.register_template', {
                     'error': 'Employee ID not found.',
@@ -34,13 +52,14 @@ class EmployeePortal(http.Controller):
             login_rec = request.env['employee.login'].sudo().search(
                 [('employee_number', '=', employee.id)], limit=1)
 
-            if not login_rec:  # register
+            if not login_rec:
                 login_rec = request.env['employee.login'].sudo().create({
                     'employee_number': employee.id,
                     'password': password,
                 })
 
-            if forgot:  # reset password
+            # Forgot password flow
+            if forgot:
                 if not new_password:
                     return request.render('AGB_HR.register_template', {
                         'error': 'Please enter a new password.',
@@ -54,27 +73,28 @@ class EmployeePortal(http.Controller):
                     'forgot': False
                 })
 
-            # Attempt login
             if login_rec.check_password(password):
                 request.session['employee_number'] = employee.id
+                request.session['login_attempts'] = 0
                 token = str(uuid.uuid4())
                 login_rec.sudo().write({'login_token': token})
-                if 'Mobile' in request.httprequest.headers.get('User-Agent', ''):
-                    return request.make_response(
-                        json.dumps({'status': 'success', 'token': token}),
-                        headers={'Content-Type': 'application/json'}
-                    )
-                else:
-                    return request.redirect('/attendance/dashboard')
 
-            else:
-                return request.render('AGB_HR.register_template', {
-                    'error': 'Wrong password.',
-                    'employee_number': emp_id,
-                    'forgot': False
-                })
+                _logger.info("Employee %s (%s) logged in successfully.", employee.name, emp_id)
 
-        # GET request
+                request.session['login_message'] = f"Welcome {employee.name}! You have logged in successfully."
+
+                return request.redirect('/attendance/dashboard')
+
+
+            # Wrong password
+            request.session['login_attempts'] = attempts + 1
+            request.session['last_attempt'] = now
+            return request.render('AGB_HR.register_template', {
+                'error': 'Wrong password.',
+                'employee_number': emp_id,
+                'forgot': False
+            })
+
         return request.render('AGB_HR.register_template', {
             'employee_number': kwargs.get('employee_number', ''),
             'forgot': kwargs.get('forgot', '').lower() in ['1', 'true', 'yes'],

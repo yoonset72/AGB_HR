@@ -18,10 +18,18 @@ body {
 /* Main Container */
 .agb-container {
   min-height: 100vh;
-  padding: 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+/* Leave Request Container - Updated for consistency */
+.leave-request-container {
+  width: 100%;
+  max-width: 1200px;
+  padding: 0 20px;
+  animation: fadeInUp 0.8s ease-out;
 }
 
 /* Company Header */
@@ -47,6 +55,7 @@ body {
   overflow: hidden;
 }
 
+
 .agb-logo-img {
   width: 100%;
   height: 100%;
@@ -60,6 +69,47 @@ body {
   color: #1565c0;
   margin: 0 0 5px 0;
   text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.half-day-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: auto;
+}
+
+#half_day_options {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0; 
+}
+
+@media (min-width: 320px) {
+  .date-range {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .half-day-row {
+    grid-column: 1 / -1; 
+    justify-content: space-around;
+  }
+}
+
+/* Mobile - From/To date stacked */
+@media (max-width: 767px) {
+  .date-range {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .half-day-row {
+    justify-content: space-between;
+  }
 }
 
 .agb-company-subtitle {
@@ -139,6 +189,7 @@ body {
 .leave-request-container {
   width: 100%;
   max-width: 1200px;
+  padding: 0 20px;
   animation: fadeInUp 0.8s ease-out;
 }
 
@@ -260,14 +311,14 @@ body {
 /* Medium screens: 2 columns (≥ 768px) */
 @media screen and (min-width: 768px) {
   .time-off-types {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(1, 1fr);
   }
 }
 
 /* Large screens: 3 columns (≥ 1024px) */
 @media screen and (min-width: 1024px) {
   .time-off-types {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(1, 1fr);
   }
 }
 
@@ -290,11 +341,11 @@ body {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
 }
 
-.time-off-type.selected {
+/* .time-off-type.selected {
   border-color: #3b82f6;
   background: linear-gradient(135deg, #e3f2fd, #f8f9fa);
   box-shadow: 0 4px 15px rgba(59, 130, 246, 0.2);
-}
+} */
 
 /* Radio Button Styling */
 .time-off-type-header {
@@ -357,9 +408,9 @@ body {
   display: none;
   margin-top: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  background: linear-gradient(135deg, #f0f9ff, #ecfdf5);
   border-radius: 12px;
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid #3b82f6;;
 }
 
 .time-off-type.selected .leave-balance-info {
@@ -380,10 +431,18 @@ body {
 
 /* Date Range */
 .date-range {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
-  align-items: end;
+}
+
+/* Desktop layout for date range */
+@media (min-width: 768px) {
+  .date-range {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: end;
+  }
 }
 
 .form-row {
@@ -793,10 +852,42 @@ body {
 }
 
 /* Info Items for Success Pages */
-.agb-info-grid {
+/* .agb-info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
+} */
+ .agb-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.agb-info-table td {
+  padding: 10px 8px;
+  vertical-align: top;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.agb-info-table label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.agb-info-table td:last-child {
+  font-size: 14px;
+  color: #333;
+  font-weight: 400;
+}
+
+.agb-info-table td:first-child {
+  font-weight: 600;   /* Labels bold */
+  color: #333;        /* Keep label color consistent */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .agb-info-item {
@@ -1189,9 +1280,20 @@ body {
     font-size: 18px;
   }
 
-  .agb-info-grid {
+  /* .agb-info-grid {
     grid-template-columns: 1fr;
     gap: 15px;
+  } */
+   .agb-info-table td {
+    padding: 6px 5px;
+  }
+
+  .agb-info-table label {
+    font-size: 11px;
+  }
+
+  .agb-info-table td:last-child {
+    font-size: 13px;
   }
 }
 
@@ -1655,3 +1757,12 @@ body {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
+
+input::placeholder,
+textarea::placeholder {
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 13px;
+  color: #999;          /* optional: light gray for placeholder */
+  font-weight: 400;     /* normal weight */
+}
+

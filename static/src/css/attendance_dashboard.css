@@ -1,4 +1,4 @@
-/* AGB Communication Attendance Dashboard Styles - Enhanced Responsive Design */
+/* AGB Communication Attendance Dashboard Styles - Enhanced with Public Holidays and Weekend Work Support */
 
 /* Reset and Base Styles */
 * {
@@ -94,6 +94,86 @@ body {
   border-radius: 50%;
   display: inline-block;
 }
+
+/* === Profile Menu === */
+.agb-profile-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.agb-profile-initials {
+    background: #4a90e2;
+    color: white;
+    font-weight: 600;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: background 0.2s ease;
+}
+
+.agb-profile-initials:hover {
+    background: #357ABD;
+}
+
+/* Responsive size for small screens */
+@media (max-width: 640px) {
+    .agb-profile-initials {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}
+
+/* Dropdown container */
+.agb-profile-dropdown {
+    position: absolute;
+    right: 0;
+    top: 45px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    min-width: 160px;
+    box-shadow: 0px 4px 8px rgba(0,0,0,0.08);
+    z-index: 1000;
+    font-family: inherit; /* match dashboard font */
+}
+
+.agb-profile-dropdown.hidden {
+    display: none;
+}
+
+/* Dropdown items (reusing dashboard button style) */
+.agb-profile-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.agb-profile-item:hover {
+    background: #f5f5f5;
+}
+
+.agb-profile-item i {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+}
+
 
 .agb-state-confirm { background: #f59e0b; }    /* orange */
 .agb-state-validate { background: #10b981; }   /* green */
@@ -394,10 +474,83 @@ body {
   font-size: 20px;
 }
 
-/* Calendar Styles - Enhanced Responsiveness */
+/* Calendar Styles - Enhanced with Public Holiday Support and Dot Indicators */
 .agb-calendar-container {
   max-width: 1200px;
   margin: 0 auto;
+  overflow-x: auto; /* Allow horizontal scroll if needed */
+}
+
+/* Status Dots for Present/Absent - Updated for dual dots */
+.agb-status-dot {
+  position: absolute;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  z-index: 10;
+  border: 1px solid white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.agb-status-dot-left {
+  right: 16px;
+}
+
+.agb-status-dot-right {
+  right: 6px;
+}
+
+.agb-status-dot-present {
+  background-color: #10b981; /* Green for present/check-in/check-out */
+}
+
+.agb-status-dot-absent {
+  background-color: #ef4444; /* Red for absent */
+}
+
+/* Public Holiday - Blue Background (no dot needed) */
+.agb-calendar-public-holiday {
+  background-color: #3b82f6 !important; /* Blue for public holidays */
+  color: white !important;
+  cursor: not-allowed !important;
+}
+
+/* Weekend Leave - Same as regular leave color */
+.agb-calendar-weekend-leave {
+  background-color: #fbbf24 !important; /* Yellow for weekend leave */
+  color: #92400e !important;
+}
+
+/* FIXED: Half Leave + Half Attendance - Clear visual distinction */
+.agb-calendar-half-leave {
+  background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%) !important;
+  border-color: #fbbf24 !important; /* blend of leave + green border */
+  color: #92400e; /* or #166534 if you prefer green text */
+}
+
+.agb-calendar-weekend-half-leave {
+  background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%) !important;
+  color: #065f46 !important;
+  border-radius: 12px;
+}
+
+/* Future dates - not clickable */
+.agb-calendar-future {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+/* Absent dates - not clickable */
+.agb-calendar-absent {
+  cursor: not-allowed !important;
+}
+
+/* Leave colors */
+.agb-calendar-leave {
+  background-color: #fbbf24 !important; /* Yellow for leave */
+  color: #92400e !important;
 }
 
 .agb-calendar-navigation {
@@ -436,7 +589,7 @@ body {
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
 }
 
-/* Calendar Legend */
+/* ENHANCED Calendar Legend with Public Holiday Support */
 .agb-calendar-legend {
   display: flex;
   justify-content: center;
@@ -447,6 +600,7 @@ body {
   background: linear-gradient(135deg, #f0f9ff, #ecfdf5);
   border-radius: 16px;
   border-left: 4px solid #3b82f6;
+  overflow-x: auto;
 }
 
 .agb-legend-item {
@@ -456,6 +610,8 @@ body {
   font-size: 14px;
   color: #374151;
   font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .agb-legend-dot {
@@ -477,10 +633,7 @@ body {
   background-color: #6b7280;
 }
 
-.agb-calendar-partial {
-    background-color: #fff3cd; 
-}
-
+/* NEW: Public holiday dot styling */
 .agb-dot-holiday {
   background-color: #3b82f6;
 }
@@ -489,29 +642,7 @@ body {
   background-color: #f59e0b;
 }
 
-/* UPDATED: Enhanced leave styling */
-.agb-calendar-leave {
-    background: #fef3c7 !important; /* Consistent yellow for all leave days */
-    border-color: #f59e0b !important;
-    color: #92400e !important;
-}
-
-/* ENHANCED: Half leave + half attendance with split background and border */
-.agb-calendar-half-leave {
-    background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%) !important; /* half yellow (leave) half green (attendance) */
-    border: 2px solid transparent !important;
-    border-image: linear-gradient(135deg, #f59e0b 50%, #22c55e 50%) 2 !important;
-    color: #166534 !important;
-}
-
-/* NEW: Enhanced weekend + half leave styling */
-.agb-calendar-weekend.agb-calendar-half-leave {
-    background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%) !important;
-    border-image: linear-gradient(135deg, #f59e0b 50%, #22c55e 50%) 2 !important;
-    color: #166534 !important;
-}
-
-/* Calendar Grid - Improved Mobile Responsiveness */
+/* Calendar Grid - Enhanced with Public Holiday Support */
 .agb-calendar-grid {
   background: white;
   border-radius: 20px;
@@ -558,6 +689,9 @@ body {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 4px 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .agb-calendar-day:not(.agb-calendar-day-empty):hover {
@@ -573,20 +707,73 @@ body {
   box-shadow: none;
 }
 
-/* UPDATED: Weekend styling - but leave on weekend uses yellow like normal leave */
+/* ENHANCED: Public Holiday Styling - Blue background with holiday name */
+.agb-calendar-public-holiday {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+  border-color: #3b82f6 !important;
+  color: #1e40af !important;
+  cursor: default !important; /* Not clickable */
+  pointer-events: none !important; /* Prevent clicks */
+}
+
+.agb-calendar-public-holiday:hover {
+  transform: none !important;
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+}
+
+/* Holiday name display */
+.agb-holiday-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1e40af;
+  text-align: center;
+  margin-top: 2px;
+  line-height: 1.2;
+  word-wrap: break-word;
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  hyphens: auto;
+}
+
+/* ENHANCED: Weekend Work Styling - Green like weekdays when attendance exists */
+.agb-calendar-weekend-present {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4) !important;
+  border-color: #22c55e !important;
+  color: #166534 !important;
+}
+
+.agb-calendar-weekend-partial {
+  background: linear-gradient(135deg, #ecfdf5, #f0fdf4) !important;
+  border-color: #22c55e !important;
+  color: #166534 !important;
+}
+
+/* ENHANCED: Weekend Leave Styling - Yellow like normal leave */
+.agb-calendar-weekend-leave {
+  background: #fef3c7 !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+}
+
+/* ENHANCED: Weekend Half Leave with Attendance */
+.agb-calendar-weekend-half-leave {
+  background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%) !important;
+  border: 2px solid transparent !important;
+  border-image: linear-gradient(135deg, #f59e0b 50%, #22c55e 50%) 2 !important;
+  color: #166534 !important;
+}
+
+/* Regular weekend styling (no work, no leave) */
 .agb-calendar-weekend {
   background: #f8fafc !important;
   color: #64748b;
   border-color: #e2e8f0;
 }
 
-/* NEW: Weekend leave styling - yellow like normal leave, not grey */
-.agb-calendar-weekend.agb-calendar-leave {
-  background: #fef3c7 !important; /* Yellow background for weekend leave */
-  border-color: #f59e0b !important;
-  color: #92400e !important;
-}
-
+/* Regular status styles */
 .agb-calendar-present {
   background: linear-gradient(135deg, #ecfdf5, #f0fdf4) !important;
   border-color: #22c55e;
@@ -599,16 +786,90 @@ body {
   color: #991b1b;
 }
 
-.agb-calendar-partial{
+.agb-calendar-partial {
   background: linear-gradient(135deg, #ecfdf5, #f0fdf4) !important;
   border-color: #22c55e;
   color: #166534;
 }
 
+/* NEW: Partial absent styling - mixed red and green background */
+.agb-calendar-partial-absent {
+  background: linear-gradient(135deg, #fef2f2 50%, #ecfdf5 50%) !important;
+  border-color: #ef4444 !important;
+  color: #991b1b !important;
+}
+
+/* NEW: Invalid half-day leave - red/yellow gradient (leave without required attendance) */
+.agb-calendar-invalid-half-leave {
+  background: linear-gradient(135deg, #fef2f2 50%, #fef3c7 50%) !important;
+  border-color: #ef4444 !important;
+  color: #991b1b !important;
+  font-weight: 600;
+  position: relative;
+}
+
+.agb-calendar-invalid-half-leave::after {
+  content: '⚠';
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  font-size: 12px;
+  color: #ef4444;
+}
+.agb-calendar-leave {
+  background: #fef3c7 !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+}
+
+/* FIXED: Improved half-leave styling with clear visual distinction */
+
+.agb-calendar-half-leave::before {
+  content: 'H';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #ffffff;
+  color: #1f2937;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* NEW: Partial leave with attendance styling */
+.agb-calendar-partial-leave {
+  background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%) !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+}
+/* FIXED: Future dates - all non-clickable including future leaves */
 .agb-calendar-future {
   opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+/* FIXED: Ensure non-clickable styling for holidays and weekends */
+.agb-calendar-public-holiday,
+.agb-calendar-weekend {
+  cursor: not-allowed !important;
+  opacity: 0.7;
+}
+
+/* Non-clickable absent dates */
+.agb-calendar-non-clickable {
+  cursor: not-allowed !important;
   pointer-events: none;
-  cursor: not-allowed;
+}
+
+/* Override hover for non-clickable absent dates */
+.agb-calendar-non-clickable:hover {
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
 }
 
 .agb-calendar-today {
@@ -621,6 +882,8 @@ body {
   font-weight: 600;
   font-size: 16px;
   margin-bottom: 6px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 /* ENHANCED: Attendance dots with support for dual green dots */
@@ -649,7 +912,7 @@ body {
   box-shadow: 0 0 4px rgba(16, 185, 129, 0.6);
 }
 
-/* NEW: Enhanced dot styling for better visibility */
+/* Enhanced dot styling for better visibility */
 .agb-dot-present {
   background-color: #10b981 !important;
   box-shadow: 0 0 3px rgba(16, 185, 129, 0.4);
@@ -658,6 +921,40 @@ body {
 .agb-dot-absent {
   background-color: #ef4444 !important;
   opacity: 0.6;
+}
+
+/* Leave Display Styling */
+.agb-leave-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow: hidden;
+}
+
+.agb-leave-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #92400e;
+  text-align: center;
+  line-height: 1.1;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.agb-weekend-leave-text {
+  color: #92400e !important;
+  font-weight: 700;
 }
 
 /* Detail Cards */
@@ -913,7 +1210,6 @@ body {
     transform: scale(1.2); /* small hover animation */
 }
 
-
 .agb-detail-label {
   font-weight: 600;
   color: #374151;
@@ -921,20 +1217,7 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-}.agb-leave-icon {
-    width: 40px;           /* size like other icons */
-    height: 40px;
-    object-fit: contain;    /* keep aspect ratio */
-    display: block;
-    margin: 0 auto;
-    cursor: pointer;        /* makes it clickable */
-    transition: transform 0.2s ease;
 }
-
-.agb-leave-icon:hover {
-    transform: scale(1.2); /* small hover animation */
-}
-
 
 .agb-detail-value {
   color: #1f2937;
@@ -959,7 +1242,6 @@ body {
 .agb-status-partial {
   background: linear-gradient(135deg, #fef3c7, #fef9c3);
   color: #caa50f;
-
 }
 
 .agb-status-absent {
@@ -1055,6 +1337,10 @@ body {
   .agb-day-number {
     font-size: 15px;
   }
+
+  .agb-holiday-name {
+    font-size: 9px;
+  }
 }
 
 /* Tablets */
@@ -1089,7 +1375,6 @@ body {
     border-radius: 16px;
   }
   
-  /* Key change: Stats grid shows 2 cards per row on mobile */
   .agb-stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
@@ -1159,26 +1444,55 @@ body {
   .agb-calendar-legend {
     gap: 12px;
     padding: 16px;
-    flex-direction: column;
-    align-items: center;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .agb-calendar-legend::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .agb-calendar-legend::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 2px;
+  }
+
+  .agb-calendar-legend::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 2px;
   }
 
   .agb-legend-item {
     font-size: 13px;
+    min-width: max-content;
   }
   
   .agb-calendar-grid {
     padding: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* Better mobile calendar sizing */
   .agb-calendar-day {
-    min-height: 60px;
+    min-height: 70px;
+    padding: 2px 1px;
   }
 
   .agb-day-number {
     font-size: 14px;
     margin-bottom: 4px;
+  }
+
+  .agb-leave-text {
+    font-size: 9px;
+    line-height: 1.0;
+    -webkit-line-clamp: 3;
+  }
+  .agb-holiday-name {
+    font-size: 8px;
+    margin-top: 1px;
+    -webkit-line-clamp: 3;
   }
 
   .agb-attendance-dot {
@@ -1227,14 +1541,11 @@ body {
     font-size: 20px;
   }
 
-
-
   .agb-form-card {
     padding: 20px;
     margin-bottom: 16px;
   }
 
-  /* Optimized stats grid for very small screens */
   .agb-stats-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
@@ -1289,13 +1600,14 @@ body {
   
   .agb-calendar-body {
     gap: 2px;
+    min-width: 100%;
   }
 
-  /* Critical mobile calendar improvements */
   .agb-calendar-day {
-    min-height: 48px;
+    min-height: 60px;
     border-radius: 8px;
     border-width: 1px;
+    padding: 1px;
   }
 
   .agb-calendar-today {
@@ -1306,6 +1618,19 @@ body {
   .agb-day-number {
     font-size: 12px;
     margin-bottom: 2px;
+  }
+
+  .agb-leave-text {
+    font-size: 8px;
+    line-height: 0.9;
+    -webkit-line-clamp: 4;
+    max-height: 32px;
+  }
+  .agb-holiday-name {
+    font-size: 6px;
+    margin-top: 1px;
+    -webkit-line-clamp: 4;
+    max-height: 24px;
   }
 
   .agb-attendance-dots {
@@ -1329,6 +1654,7 @@ body {
   .agb-calendar-legend {
     padding: 12px;
     gap: 8px;
+    justify-content: flex-start;
   }
 
   .agb-legend-item {
@@ -1409,7 +1735,6 @@ body {
     margin-bottom: 12px;
   }
 
-  /* Very tight stats grid for tiny screens */
   .agb-stats-grid {
     gap: 6px;
   }
@@ -1443,13 +1768,25 @@ body {
     padding: 4px 8px;
   }
 
-  /* Ultra-compact calendar for tiny screens */
   .agb-calendar-day {
-    min-height: 42px;
+    min-height: 55px;
+    padding: 1px;
   }
 
   .agb-day-number {
     font-size: 11px;
+  }
+
+  .agb-leave-text {
+    font-size: 7px;
+    line-height: 0.8;
+    -webkit-line-clamp: 5;
+    max-height: 28px;
+  }
+  .agb-holiday-name {
+    font-size: 5px;
+    -webkit-line-clamp: 5;
+    max-height: 20px;
   }
 
   .agb-calendar-header-cell {
@@ -1571,7 +1908,6 @@ body {
     to { transform: translateX(-50%) rotate(360deg); }
 }
 
-
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -1685,178 +2021,3 @@ body {
   margin-bottom: 16px;
 }
 
-/* AGB Communication Attendance Dashboard Styles - Fixed Leave Styling */
-
-/* Reset and Base Styles */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  line-height: 1.6;
-  color: #333;
-  overflow-x: hidden;
-}
-
-/* Main Container */
-.agb-app-container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 50%, #e8f5e8 100%);
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Sticky Top Navigation Bar */
-.agb-top-nav {
-  background: white;
-  padding: 20px 30px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  animation: fadeInDown 0.6s ease-out;
-}
-
-.agb-sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.agb-nav-title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e40af;
-  margin: 0;
-  background: linear-gradient(135deg, #1e40af, #3b82f6);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.agb-nav-actions {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.agb-nav-welcome {
-  font-weight: 600;
-  color: #475569;
-  font-size: 14px;
-}
-
-.agb-leave-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-/* ENHANCED: Leave text styling with weekend support */
-.agb-leave-text {
-  font-size: 11px;
-  font-weight: 600;
-  color: #92400e; /* Darker yellow text for better contrast on yellow background */
-  text-align: center;
-}
-
-/* NEW: Special styling for weekend leave text */
-.agb-weekend-leave-text {
-  color: #92400e !important; /* Same dark yellow as regular leave for consistency */
-  font-weight: 700;
-}
-
-/* ENHANCED: Leave display positioning */
-.agb-leave-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-  position: relative;
-  z-index: 1;
-}
-
-/* State icons */
-.agb-status-icon {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.agb-state-confirm { background: #f59e0b; }    /* orange */
-.agb-state-validate { background: #10b981; }   /* green */
-.agb-state-validate1 { background: #3b82f6; }  /* blue */
-.agb-state-refuse { background: #ef4444; }     /* red */
-
-/* Buttons */
-.agb-btn {
-  padding: 12px 16px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.agb-btn-link {
-  background: none;
-  color: #3b82f6;
-  border: none;
-  padding: 12px 16px;
-  text-decoration: none;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.agb-btn-link:hover {
-  background: rgba(59, 130, 246, 0.1);
-  transform: translateY(-1px);
-  color: #1d4ed8;
-  border-radius: 8px;
-}
-
-.agb-btn-primary {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: white;
-  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
-}
-
-.agb-btn-primary:hover {
-  background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-}
-
-/* ENHANCED: Updated leave dot color */
-.agb-dot-leave {
-  background-color: #f59e0b; /* Consistent yellow for leave */
-}
-
-/* NEW: Half-leave dot styling for legend */
-.agb-dot-half-leave {
-  background: linear-gradient(135deg, #f59e0b 50%, #10b981 50%);
-}

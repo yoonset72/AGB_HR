@@ -1,6 +1,7 @@
 from odoo import http
 from odoo.http import request
 import logging
+import base64, json
 from datetime import datetime 
 _logger = logging.getLogger(__name__)
 
@@ -192,6 +193,66 @@ class EmployeePortal(http.Controller):
                 'error': f'Failed to update profile: {str(e)}'
             }
 
+    @http.route('/employee/update_profile_image', type='http', auth='user', methods=['POST'], csrf=True)
+    def update_profile_image(self, **kwargs):
+        file = request.httprequest.files.get('image')
+        if not file:
+            return request.make_response(
+                json.dumps({'success': False, 'error': 'No file uploaded'}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
+        emp_number = request.session.get('employee_number')
+        employee = request.env['hr.employee'].sudo().search([('id', '=', emp_number)], limit=1)
+        if not employee:
+            return request.make_response(
+                json.dumps({'success': False, 'error': 'Employee record not found'}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
+        try:
+            # Convert to base64 and write
+            employee.sudo().write({'image_1920': base64.b64encode(file.read())})
+        except Exception as e:
+            return request.make_response(
+                json.dumps({'success': False, 'error': f'This file could not be decoded as an image file. ({str(e)})'}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
+        return request.make_response(
+            json.dumps({'success': True, 'image_url': f'/web/image/hr.employee/{employee.id}/image_1920'}),
+            headers=[('Content-Type', 'application/json')]
+        )
+
+
+    @http.route('/employee/remove_profile_image', type='http', auth='user', methods=['POST'], csrf=True)
+    def remove_profile_image(self, **kwargs):
+        emp_number = request.session.get('employee_number')
+        if not emp_number:
+            return request.make_response(
+                json.dumps({'success': False, 'error': 'Not logged in or session expired'}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
+        employee = request.env['hr.employee'].sudo().search([
+            ('id', '=', emp_number)
+        ], limit=1)
+
+        if not employee:
+            return request.make_response(
+                json.dumps({'success': False, 'error': 'Employee record not found'}),
+                headers=[('Content-Type', 'application/json')]
+            )
+
+        # Remove profile image
+        employee.sudo().write({'image_1920': False})
+
+        return request.make_response(
+            json.dumps({'success': True, 'message': 'Profile image removed successfully'}),
+            headers=[('Content-Type', 'application/json')]
+        )
+
+    
     # @http.route('/employee/congrats', type='http', auth='public', website=True)
     # def employee_congrats(self, **kwargs):
     #     return request.render('AGB_HR.congrats_template')

@@ -12,7 +12,8 @@
         'views/register_template.xml',
         'views/leave_request_form_template.xml',
         'views/employee_profile_template.xml',
-        'views/leave_balance.xml'
+        'views/leave_balance.xml',
+        'views/hr_leave_tree.xml',
     ],
     'assets': {
         'web.assets_frontend': [

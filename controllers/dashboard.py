@@ -17,17 +17,25 @@ class AttendanceDashboardController(http.Controller):
         """Return current datetime in Myanmar timezone"""
         return datetime.now(pytz.utc).astimezone(MYANMAR_TZ)
 
-    def _get_fiscal_period(self):
-        """Return start_date and end_date based on fiscal year starting July 26"""
-        today = self._now_myanmar()
-        start = today.replace(month=8, day=29, hour=0, minute=0, second=0, microsecond=0)
-
-        if today < start:
-            start_date = start.replace(year=today.year - 1)
+    def _get_25th_to_25th_period(self):
+        """Return start_date and end_date from 25th of previous month to 25th of current month."""
+        now = self._now_myanmar()
+        if now.day >= 25:
+            start_date = now.replace(day=25, hour=0, minute=0, second=0, microsecond=0)
+            # end date is 25th next month
+            if now.month == 12:
+                end_date = now.replace(year=now.year + 1, month=1, day=25, hour=23, minute=59, second=59)
+            else:
+                end_date = now.replace(month=now.month + 1, day=25, hour=23, minute=59, second=59)
         else:
-            start_date = start.replace(year=today.year)
+            # start date is 25th previous month
+            if now.month == 1:
+                start_date = now.replace(year=now.year - 1, month=12, day=25, hour=0, minute=0, second=0)
+            else:
+                start_date = now.replace(month=now.month - 1, day=25, hour=0, minute=0, second=0)
+            end_date = now.replace(day=25, hour=23, minute=59, second=59)
+        return start_date, end_date
 
-        return start_date, today
 
     # --- Dashboard Route ---
     @http.route('/attendance/dashboard', type='http', auth='public', website=True)
@@ -49,19 +57,44 @@ class AttendanceDashboardController(http.Controller):
 
         employee = request.env['hr.employee'].sudo().browse(employee_id)
 
-        start_date, end_date = self._get_fiscal_period()
+        # --- 25th-to-25th period ---
+        start_date, end_date = self._get_25th_to_25th_period()
 
+        # --- Attendance records ---
         attendances = request.env['hr.attendance'].sudo().search([
             ('employee_id', '=', employee.id),
             ('check_in', '>=', start_date),
             ('check_in', '<=', end_date)
         ])
 
+        # --- Calculate stats ---
         stats = self._calculate_stats(employee, attendances, start_date, end_date)
+
+        # --- Leave records ---
+        leaves = request.env['hr.leave'].sudo().search([
+            ('employee_id', '=', employee.id),
+            ('request_date_from', '<=', end_date),
+            ('request_date_to', '>=', start_date),
+            ('state', 'in', ['confirm', 'validate', 'validate1'])
+        ])
+
+        # Sum total leave days instead of just record count
+        stats['leaveCount'] = sum(leave.number_of_days for leave in leaves)
+
+        for leave in leaves:
+            _logger.info(
+                "Leave Found: %s | From: %s | To: %s | Days: %s",
+                leave.holiday_status_id.display_name,  # leave type name
+                leave.request_date_from,
+                leave.request_date_to,
+                leave.number_of_days
+            )
+
 
         return request.render('AGB_HR.main_dashboard', {
             'employee': employee,
             'stats': stats,
+            'employee_initials': self._get_initials(employee.name),
             'current_period': f"{start_date.strftime('%B %d, %Y')} - {end_date.strftime('%B %d, %Y')}",
             'company_info': {
                 'name': 'AGB Communication',
@@ -70,6 +103,13 @@ class AttendanceDashboardController(http.Controller):
                 'email': 'hr@agbcommunication.com'
             }
         })
+
+    
+    def _get_initials(self, name):
+        if not name:
+            return ""
+        parts = [part[0].upper() for part in name.split() if part]
+        return "".join(parts[-3:])
 
     # --- Calendar Route ---
     @http.route('/attendance/calendar', type='http', auth='public', website=True)
@@ -129,6 +169,13 @@ class AttendanceDashboardController(http.Controller):
             for day in absent_days
             if start_date.date() <= day.get('date', date.min) <= end_date.date()
         )
+        
+        # Add invalid half leaves to absent count
+        absent_count += sum(
+            day.get('number_of_days', 0)
+            for day in calendar_data.values()
+            if day.get('is_invalid_half_leave')
+        )
 
         # Late count
         late_count = sum(1 for a in attendances if getattr(a, 'display_late_minutes', 0) > 0)
@@ -148,7 +195,7 @@ class AttendanceDashboardController(http.Controller):
         }
 
     def _get_calendar_data(self, employee, year, month):
-        """FIXED: Enhanced calendar data with proper half-day leave detection"""
+        """Enhanced calendar data with proper half-day leave + public holiday detection"""
         calendar_data = {}
         _, num_days = calendar.monthrange(year, month)
         today_date = self._now_myanmar().date()
@@ -159,11 +206,19 @@ class AttendanceDashboardController(http.Controller):
         # --- Fetch leaves overlapping this month ---
         month_start = datetime(year, month, 1, 0, 0, 0)
         month_end = datetime(year, month, num_days, 23, 59, 59)
+
         leaves = request.env['hr.leave'].sudo().search([
             ('employee_id', '=', employee.id),
             ('request_date_from', '<=', month_end),
             ('request_date_to', '>=', month_start),
-            ('state', 'in', ['confirm', 'validate', 'validate1']) 
+            ('state', 'in', ['confirm', 'validate', 'validate1'])
+        ])
+
+        # --- Fetch public holidays (resource_id=False) overlapping this month ---
+        public_holidays = request.env['resource.calendar.leaves'].sudo().search([
+            ('resource_id', '=', False),
+            ('date_from', '<=', month_end),
+            ('date_to', '>=', month_start)
         ])
 
         for day in range(1, num_days + 1):
@@ -192,26 +247,86 @@ class AttendanceDashboardController(http.Controller):
             # --- Check for leave on this day ---
             day_leaves = leaves.filtered(lambda l: l.request_date_from <= current_date <= l.request_date_to)
             has_leave = bool(day_leaves)
-            
-            # FIXED: Determine if it's half-day leave
-            is_half_leave = False
-            if has_leave and attendance_fraction > 0:
-                # If there's both leave and attendance, it's a half-day leave
-                is_half_leave = True
 
-            # --- Status determination ---
-            if weekday >= 5:
-                status = 'weekend'
-            elif has_leave and not is_half_leave:
-                status = 'leave'  # Full day leave
-            elif is_half_leave:
-                status = 'half_leave'  # Half day leave
+            # --- Check for public holiday ---
+            day_holidays = public_holidays.filtered(
+                lambda h: h.date_from.date() <= current_date <= h.date_to.date()
+            )
+            is_public_holiday = bool(day_holidays)
+
+            # --- Half-day leave validation ---
+            is_invalid_half_leave = False
+            if has_leave and day_leaves:
+                leave = day_leaves[0]
+                leave_duration = leave.number_of_days
+                half_day_type = leave.request_date_from_period if leave.request_unit_half else None
+                
+                # Check if it's a half-day leave (0.5, 1.5, 2.5, etc.)
+                if leave_duration % 1 == 0.5:
+                    # Validate half-day leave with attendance
+                    if half_day_type == 'am':  # Morning leave
+                        # Afternoon attendance must be present (check_out exists)
+                        if not check_out or working_hours < 2:
+                            is_invalid_half_leave = True
+                    elif half_day_type == 'pm':  # Afternoon leave
+                        # Morning attendance must be present (check_in exists)
+                        if not check_in or working_hours < 2:
+                            is_invalid_half_leave = True
+
+            # Determine if it's partial leave (leave with attendance)
+            is_partial_leave = has_leave and attendance_fraction > 0 and not is_invalid_half_leave
+
+            # --- Enhanced Status determination ---
+            if is_public_holiday:
+                status = 'public_holiday'
+            elif is_invalid_half_leave:
+                status = 'invalid_half_leave'   # Half-day leave without corresponding attendance
+            elif has_leave and not is_partial_leave:
+                status = 'leave'               # Full leave
+            elif is_partial_leave:
+                status = 'partial_leave'       # Partial leave (leave with attendance)
+            elif weekday >= 5 and attendance_fraction > 0:
+                # Weekend work
+                if attendance_fraction == 1.0:
+                    status = 'weekend_present'
+                else:
+                    status = 'weekend_partial'
+            elif weekday >= 5:
+                status = 'weekend'             # Regular weekend
             elif attendance_fraction == 1.0:
-                status = 'present'
+                status = 'present'             # Full attendance
             elif attendance_fraction == 0.5:
-                status = 'partial'
+                # Check if it's partial absent or partial present
+                if current_date <= today_date and not has_leave:
+                    status = 'partial_absent'  # Missing check-in or check-out
+                else:
+                    status = 'partial'         # Partial attendance
+            elif attendance_fraction == 0.0 and current_date <= today_date and weekday < 5:
+                status = 'full_absent'         # Full absent
             else:
-                status = 'absent'
+                status = 'absent'              # Default absent
+
+            # Override for future dates
+            if current_date > today_date and not has_leave:
+                status = 'future'
+
+            # Legacy status mapping for backward compatibility
+            if status == 'partial_leave':
+                is_half_leave = True
+            elif status in ['weekend_present', 'weekend_partial']:
+                # Weekend work cases
+                if has_leave:
+                    if attendance_fraction > 0:
+                        status = 'weekend_half_leave'
+                    else:
+                        status = 'weekend_leave'
+            else:
+                is_half_leave = False
+
+            # Determine clickability
+            is_clickable = True
+            if status in ['full_absent', 'public_holiday'] or (current_date > today_date and not has_leave):
+                is_clickable = False
 
             # --- Late calculation ---
             late_minutes, is_late, severity = 0, False, None
@@ -238,6 +353,7 @@ class AttendanceDashboardController(http.Controller):
                 'formatted_date': current_date.strftime('%Y-%m-%d'),
                 'check_in_time': check_in.strftime('%H:%M') if check_in else None,
                 'check_out_time': check_out.strftime('%H:%M') if check_out else None,
+                'working_hours': round(working_hours,2) if working_hours else 0,
                 'is_weekend': weekday >= 5,
                 'is_today': current_date == today_date,
                 'is_future': current_date > today_date,
@@ -249,15 +365,18 @@ class AttendanceDashboardController(http.Controller):
                 'attendance_fraction': attendance_fraction,
                 'status': status,
                 'shift_name': shift_name,
-                # FIXED: Added proper leave and half-leave detection
                 'leave': has_leave,
                 'is_half_leave': is_half_leave,
-                'has_attendance': bool(day_att),  # New field to indicate if there's attendance data
+                'is_partial_leave': is_partial_leave,
+                'is_public_holiday': is_public_holiday,
+                'has_attendance': bool(day_att),
+                'is_clickable': is_clickable,
             }
 
             # --- Add leave info if exists ---
             if day_leaves:
-                leave = day_leaves[0]  # show first leave if multiple
+                leave = day_leaves[0]
+                half_day = leave.request_unit_half
                 calendar_data[day].update({
                     'leave_name': leave.holiday_status_id.name,
                     'leave_state': leave.state,
@@ -266,9 +385,23 @@ class AttendanceDashboardController(http.Controller):
                     'second_approver': ', '.join(leave.second_approver_ids.mapped('name')) if leave.second_approver_ids else '',
                     'from_date': leave.request_date_from,
                     'to_date': leave.request_date_to,
+                    'number_of_days': leave.number_of_days,
+                    'half_day_type': leave.request_date_from_period if half_day else None,
+                    'is_invalid_half_leave': is_invalid_half_leave,
+                })
+            
+
+            # --- Add holiday info if exists ---
+            if day_holidays:
+                holiday = day_holidays[0]
+                calendar_data[day].update({
+                    'holiday_name': holiday.name,
+                    'holiday_from': holiday.date_from,
+                    'holiday_to': holiday.date_to,
                 })
 
         return calendar_data
+
 
     def _get_prev_month(self, year, month):
         if month == 1:
@@ -280,8 +413,18 @@ class AttendanceDashboardController(http.Controller):
             return {'year': year + 1, 'month': 1}
         return {'year': year, 'month': month + 1}
     
+    def _get_public_holidays(self, start_date, end_date):
+        """Fetch all public holidays (resource_id is False) within the date range."""
+        return request.env['resource.calendar.leaves'].sudo().search([
+            ('resource_id', '=', False),   # Global holidays
+            ('date_from', '<=', end_date),
+            ('date_to', '>=', start_date)
+        ])
+
+    
+    
     def _get_absent_days(self, employee):
-        start_date, end_date = self._get_fiscal_period()
+        start_date, end_date = self._get_25th_to_25th_period()
         today = self._now_myanmar().date()
 
         attendances = request.env['hr.attendance'].sudo().search([
@@ -290,10 +433,42 @@ class AttendanceDashboardController(http.Controller):
                 '&', ('check_out', '>=', start_date), ('check_out', '<=', end_date)
         ])
 
+        # 🔑 Fetch all valid leaves in range
+        leaves = request.env['hr.leave'].sudo().search([
+            ('employee_id', '=', employee.id),
+            ('request_date_from', '<=', end_date),
+            ('request_date_to', '>=', start_date),
+            ('state', 'in', ['confirm', 'validate', 'validate1'])
+        ])
+
+        # 🔑 Fetch public holidays in range
+        public_holidays = request.env['resource.calendar.leaves'].sudo().search([
+            ('resource_id', '=', False),   # Global holiday (not tied to one employee)
+            ('date_from', '<=', end_date),
+            ('date_to', '>=', start_date)
+        ])
+
         absent_days = []
         current_date = start_date.date()
 
         while current_date <= today:
+            # ✅ Skip if this day is a public holiday
+            day_holidays = public_holidays.filtered(
+                lambda h: h.date_from.date() <= current_date <= h.date_to.date()
+            )
+            if day_holidays:
+                current_date += timedelta(days=1)
+                continue
+
+            # ✅ Skip if this day is covered by leave
+            day_leaves = leaves.filtered(
+                lambda l: l.request_date_from <= current_date <= l.request_date_to
+            )
+            if day_leaves:
+                current_date += timedelta(days=1)
+                continue
+
+            # Find attendance for this day
             day_att = attendances.filtered(lambda a: 
                 (a.check_in and a.check_in.date() == current_date) or
                 (not a.check_in and a.check_out and a.check_out.date() == current_date)
@@ -323,8 +498,7 @@ class AttendanceDashboardController(http.Controller):
                         continue
 
                     if check_in and check_out and working_hours >= 5:
-                        # Full present
-                        pass
+                        pass  # Fully present
                     else:
                         if check_in and not check_out:
                             absence_type = 'Evening Absent'
@@ -351,8 +525,9 @@ class AttendanceDashboardController(http.Controller):
 
         return absent_days
 
+
     def _get_late_days(self, employee):
-        start_date, end_date = self._get_fiscal_period()
+        start_date, end_date = self._get_25th_to_25th_period()
 
         attendances = request.env['hr.attendance'].sudo().search([
             ('employee_id', '=', employee.id),
@@ -410,7 +585,7 @@ class AttendanceDashboardController(http.Controller):
             'employee': employee,
             'absent_days': absent_days,
             'total_absent': len(absent_days),
-            'current_period': f"{self._get_fiscal_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
+            'current_period': f"{self._get_25th_to_25th_period()[0].strftime('%B %d, %Y')} - {self._now_myanmar().strftime('%B %d, %Y')}"
         })
 
     @http.route('/attendance/late', type='http', auth='public', website=True)

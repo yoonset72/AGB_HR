@@ -1,7 +1,9 @@
 /**
  * AGB Communication Myanmar Employee Profile JavaScript
  * Handles all interactive functionality for the employee profile page
+ * Updated to work with Python/Odoo backend
  */
+
 // Global variables
 let currentEditSection = null;
 let originalFormData = {};
@@ -27,6 +29,9 @@ function initializeProfile() {
     
     // Check for unsaved changes
     window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // Initialize image upload functionality
+    initializeImageUpload();
 }
 
 /**
@@ -150,7 +155,7 @@ function setupPersonalEditForm(modalTitle, editFields) {
             </label>
             <input type="text" name="nrc_full" class="agb-input" 
                    value="${getEmployeeData('nrc_full')}" 
-                   placeholder="e.g., 12/KAMANA(N)123456" disabled/>
+                   placeholder="e.g., 12/KAMANA(N)123456"/>
         </div>
         <div class="agb-form-group">
             <label class="agb-label">
@@ -160,7 +165,6 @@ function setupPersonalEditForm(modalTitle, editFields) {
             <input type="text" name="country_id" class="agb-input" 
                 value="${getEmployeeData('country_id.name')}" placeholder="e.g., Myanmar"/>
         </div>
-
         <div class="agb-form-group">
             <label class="agb-label">
                 <i class="fa fa-heart"></i>
@@ -181,6 +185,41 @@ function setupPersonalEditForm(modalTitle, editFields) {
             </label>
             <input type="text" name="permit_no" class="agb-input"
                 value="${getEmployeeData('permit_no')}" placeholder="e.g., 123456789"/>
+        </div>
+    `;
+}
+
+/**
+ * Setup contact information edit form
+ */
+function setupContactEditForm(modalTitle, editFields) {
+    modalTitle.textContent = 'Edit Contact Information';
+    editFields.innerHTML = `
+        <div class="agb-form-group">
+            <label class="agb-label">
+                <i class="fa fa-phone"></i>
+                Personal Phone
+            </label>
+            <input type="tel" name="personal_phone" class="agb-input" 
+                   value="${getEmployeeData('personal_phone')}" 
+                   placeholder="+95-9-xxx-xxx-xxx"/>
+        </div>
+        <div class="agb-form-group">
+            <label class="agb-label">
+                <i class="fa fa-envelope"></i>
+                Personal Email
+            </label>
+            <input type="email" name="personal_email" class="agb-input" 
+                   value="${getEmployeeData('personal_email')}" 
+                   placeholder="your.email@gmail.com"/>
+        </div>
+        <div class="agb-form-group">
+            <label class="agb-label">
+                <i class="fa fa-home"></i>
+                Home Address
+            </label>
+            <textarea name="home_address" class="agb-input" rows="3" 
+                      placeholder="Enter your complete home address">${getEmployeeData('home_address')}</textarea>
         </div>
     `;
 }
@@ -214,7 +253,6 @@ function setupEducationEditForm(modalTitle, editFields) {
                    value="${getEmployeeData('study_field')}" 
                    placeholder="e.g., Computer Science, Business Administration"/>
         </div>
-        <br/>
         <div class="agb-form-group">
             <label class="agb-label">
                 <i class="fa fa-phone"></i>
@@ -293,8 +331,6 @@ function getEmployeeData(field) {
     console.log(`getEmployeeData("${field}") => no element found`);
     return '';
 }
-
-
 
 /**
  * Store original form data for comparison
@@ -385,7 +421,7 @@ function handleFormSubmit(event) {
         data[key] = value;
     });
     
-    // Add section and employee_number
+    // Add section
     data['section'] = currentEditSection;
     
     console.log('Sending data:', data); // Debug log
@@ -403,6 +439,9 @@ function handleFormSubmit(event) {
     })
     .then(response => {
         console.log('Response status:', response.status);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         return response.json();
     })
     .then(responseData => {
@@ -428,8 +467,6 @@ function handleFormSubmit(event) {
     });
 }
 
-
-
 /**
  * Get CSRF token for secure requests
  */
@@ -437,7 +474,6 @@ function getCsrfToken() {
     const token = document.querySelector('meta[name="csrf-token"]');
     return token ? token.getAttribute('content') : '';
 }
-
 
 /**
  * Check for unsaved changes
@@ -498,7 +534,6 @@ function updatePageData(updatedData) {
     }
 }
 
-
 /**
  * Show notification message
  */
@@ -532,6 +567,347 @@ function showNotification(message, type = 'info') {
 }
 
 /**
+ * Initialize image upload functionality
+ */
+function initializeImageUpload() {
+    const imageContainer = document.querySelector('.agb-profile-image-container');
+    const fileInput = document.getElementById('profile-image-input');
+    
+    if (imageContainer && fileInput) {
+        // Add drag and drop support
+        imageContainer.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            imageContainer.classList.add('agb-drag-over');
+        });
+        
+        imageContainer.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            imageContainer.classList.remove('agb-drag-over');
+        });
+        
+        imageContainer.addEventListener('drop', function(e) {
+            e.preventDefault();
+            imageContainer.classList.remove('agb-drag-over');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleImageFile(files[0]);
+            }
+        });
+    }
+}
+
+/**
+ * Open image upload dialog
+ */
+function openImageUpload() {
+    const fileInput = document.getElementById('profile-image-input');
+    if (fileInput) {
+        fileInput.click();
+    }
+}
+
+/**
+ * Handle image upload from file input
+ */
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (file) {
+        handleImageFile(file);
+    }
+}
+
+/**
+ * Handle file input change
+ */
+function handleImageUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    handleImageFile(file);
+}
+
+/**
+ * Validate and upload image
+ */
+function handleImageFile(file) {
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        showToast('Invalid file type', 'Please select an image file (JPG, PNG, etc.)', 'error');
+        return;
+    }
+
+    // Validate file size (5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showToast('File too large', 'Please select an image smaller than 5MB', 'error');
+        return;
+    }
+
+    // Show loading spinner
+    showImageUploadLoading(true);
+
+    // Prepare FormData
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('csrf_token', getCsrfToken());
+
+    // Include employee_number from DOM
+    const header = document.querySelector('.agb-profile-header');
+    if (header && header.dataset.employeeNumber) {
+        formData.append('employee_number', header.dataset.employeeNumber);
+    }
+
+    // Upload via fetch
+    fetch('/employee/update_profile_image', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        showImageUploadLoading(false);
+
+        if (data.success) {
+            updateProfileImagePreview(data.image_url);
+            showToast('Image uploaded', 'Your profile image has been updated successfully', 'success');
+            showRemoveButton(true);
+        } else {
+            showToast('Upload failed', data.error || 'Failed to upload image', 'error');
+        }
+    })
+    .catch(err => {
+        showImageUploadLoading(false);
+        console.error('Upload error:', err);
+        showToast('Upload failed', 'An error occurred while uploading the image. Please try again.', 'error');
+    });
+}
+
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'agb-confirm-overlay';
+        
+        // Create confirm box
+        const box = document.createElement('div');
+        box.className = 'agb-confirm-box';
+        box.innerHTML = `
+            <p>${message}</p>
+            <div class="agb-confirm-actions">
+                <button class="agb-confirm-yes">Yes</button>
+                <button class="agb-confirm-no">No</button>
+            </div>
+        `;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        
+        // Handle Yes/No clicks
+        box.querySelector('.agb-confirm-yes').addEventListener('click', () => {
+            overlay.remove();
+            resolve(true);
+        });
+        box.querySelector('.agb-confirm-no').addEventListener('click', () => {
+            overlay.remove();
+            resolve(false);
+        });
+    });
+}
+
+
+async function removeProfileImage(event) {
+    event.stopPropagation();
+
+    const confirmed = await showConfirm('Are you sure you want to remove your profile image?');
+    if (!confirmed) return;
+
+    showImageUploadLoading(true);
+
+    const header = document.querySelector('.agb-profile-header');
+    let empNumber = header ? header.getAttribute('data-employee-number') : null;
+
+    // Use FormData instead of JSON
+    const formData = new FormData();
+    formData.append('csrf_token', getCsrfToken());
+    if (empNumber) formData.append('employee_number', empNumber);
+
+    fetch('/employee/remove_profile_image', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        showImageUploadLoading(false);
+
+        if (data.success) {
+            updateProfileImagePreview(null);
+            showToast('Image removed', 'Your profile image has been removed successfully', 'success');
+            showRemoveButton(false);
+        } else {
+            showToast('Remove failed', data.error || 'Failed to remove image', 'error');
+        }
+    })
+    .catch(err => {
+        showImageUploadLoading(false);
+        console.error('Remove error:', err);
+        showToast('Remove failed', 'An error occurred while removing the image. Please try again.', 'error');
+    });
+}
+
+
+/**
+ * Helpers (you likely already have these)
+ */
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
+function showImageUploadLoading(show) {
+    const loader = document.getElementById('image-loading');
+    if (loader) loader.style.display = show ? 'block' : 'none';
+}
+
+
+
+
+/**
+ * Handle image load success
+ */
+function handleImageLoad(imgElement) {
+    console.log('Image loaded successfully');
+    showImageUploadLoading(false);
+    
+    // Show remove button
+    const removeBtn = document.querySelector('.agb-profile-remove-btn');
+    if (removeBtn) {
+        removeBtn.style.display = 'flex';
+    }
+}
+
+/**
+ * Handle image load error - this fixes the "always error loading image" issue
+ */
+function handleImageError(imgElement) {
+    console.error('Failed to load profile image');
+    showImageUploadLoading(false);
+    
+    // Show fallback avatar
+    const container = imgElement.parentElement;
+    if (container) {
+        imgElement.style.display = 'none';
+        
+        // Create or show avatar fallback
+        let avatar = container.querySelector('.agb-profile-avatar');
+        if (!avatar) {
+            avatar = document.createElement('div');
+            avatar.className = 'agb-profile-avatar';
+            avatar.innerHTML = '<i class="fa fa-user"></i>';
+            container.appendChild(avatar);
+        }
+        avatar.style.display = 'flex';
+        
+        // Show error notification
+        showToast('Image Error', 'Failed to load profile image', 'error');
+    }
+}
+
+function updateProfileImagePreview(imageUrl) {
+    const imageElement = document.getElementById('profile-image');
+    const avatarElement = document.getElementById('profile-avatar');
+    const container = document.querySelector('.agb-profile-image-container');
+
+    if (imageUrl) {
+        // Show image
+        if (imageElement) {
+            imageElement.src = imageUrl;  // use URL directly
+            imageElement.style.display = 'block';
+            imageElement.onerror = function() { handleImageError(this); };
+            imageElement.onload = function() { handleImageLoad(this); };
+        } else if (container) {
+            // Create new image element
+            const newImage = document.createElement('img');
+            newImage.id = 'profile-image';
+            newImage.className = 'agb-profile-image';
+            newImage.alt = 'Employee Photo';
+            newImage.src = imageUrl;
+            newImage.onerror = function() { handleImageError(this); };
+            newImage.onload = function() { handleImageLoad(this); };
+            container.insertBefore(newImage, container.firstChild);
+        }
+
+        // Hide avatar
+        if (avatarElement) avatarElement.style.display = 'none';
+    } else {
+        // Hide image and show avatar
+        if (imageElement) imageElement.style.display = 'none';
+
+        if (avatarElement) {
+            avatarElement.style.display = 'flex';
+        } else if (container) {
+            // Create avatar element if not exist
+            const newAvatar = document.createElement('div');
+            newAvatar.id = 'profile-avatar';
+            newAvatar.className = 'agb-profile-avatar';
+            newAvatar.innerHTML = '<i class="fa fa-user"></i>';
+            newAvatar.style.display = 'flex';
+            container.insertBefore(newAvatar, container.firstChild);
+        }
+    }
+}
+
+
+/**
+ * Show/hide image upload loading state
+ */
+function showImageUploadLoading(show) {
+    const loadingElement = document.getElementById('image-loading');
+    const editIndicator = document.querySelector('.agb-profile-edit-indicator');
+    const overlay = document.querySelector('.agb-profile-overlay');
+    
+    if (loadingElement) {
+        loadingElement.style.display = show ? 'flex' : 'none';
+    }
+    
+    if (editIndicator) {
+        editIndicator.style.display = show ? 'none' : 'flex';
+    }
+    
+    if (overlay) {
+        overlay.style.display = show ? 'none' : 'flex';
+    }
+}
+
+/**
+ * Show/hide remove button
+ */
+function showRemoveButton(show) {
+    const removeBtn = document.querySelector('.agb-profile-remove-btn');
+    if (removeBtn) {
+        removeBtn.style.display = show ? 'flex' : 'none';
+    }
+}
+
+/**
+ * Change password functionality
+ */
+function changePassword() {
+    const employeeNumberElement = document.querySelector('[data-field="employee_number"]');
+    const employeeNumber = employeeNumberElement ? employeeNumberElement.textContent.trim() : null;
+
+    if (employeeNumber) {
+        window.location.href = `/employee/register?forgot=1`;
+    } else {
+        alert("Employee ID not found.");
+    }
+}
+
+/**
  * Setup settings button listeners
  */
 function setupSettingsListeners() {
@@ -541,24 +917,6 @@ function setupSettingsListeners() {
         changePasswordBtn.addEventListener('click', function(e) {
             e.preventDefault();
             changePassword();
-        });
-    }
-    
-    // Update notifications
-    const notificationsBtn = document.querySelector('[onclick="updateNotifications()"]');
-    if (notificationsBtn) {
-        notificationsBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            updateNotifications();
-        });
-    }
-    
-    // Download profile
-    const downloadBtn = document.querySelector('[onclick="downloadProfile()"]');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            downloadProfile();
         });
     }
 }
@@ -577,26 +935,6 @@ function setupNavigationListeners() {
         });
     });
 }
-
-
-/**
- * Change password functionality
- */
-function changePassword() {
-  const employeeNumberElement = document.querySelector('[data-field="employee_number"]');
-  const employeeNumber = employeeNumberElement ? employeeNumberElement.textContent.trim() : null;
-
-  if (employeeNumber) {
-    window.location.href = `/employee/register?forgot=1`;
-  } else {
-    alert("Employee ID not found.");
-  }
-}
-
-
-
-
-
 
 /**
  * Add loading states to elements
@@ -626,6 +964,57 @@ function handleBeforeUnload(event) {
 }
 
 /**
+ * Load recent activity (placeholder)
+ */
+function loadRecentActivity() {
+    // Load recent activity data
+    console.log('Recent activity loaded');
+}
+
+/**
+ * Show toast notification
+ */
+function showToast(title, message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container') || document.body;
+    
+    const toast = document.createElement('div');
+    toast.className = `agb-toast agb-toast-${type}`;
+    toast.innerHTML = `
+        <div class="agb-toast-content">
+            <h4>${title}</h4>
+            <p>${message}</p>
+        </div>
+        <button class="agb-toast-close" onclick="this.parentElement.remove()">
+            <i class="fa fa-times"></i>
+        </button>
+    `;
+    
+    toastContainer.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 5000);
+    
+    // Animate in
+    requestAnimationFrame(() => {
+        toast.classList.add('agb-toast-show');
+    });
+}
+
+/**
+ * Toggle profile dropdown menu
+ */
+function toggleProfileMenu() {
+    const dropdown = document.getElementById('profile-dropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('agb-hidden');
+    }
+}
+
+/**
  * Close modal when clicking outside
  */
 window.addEventListener('click', function(event) {
@@ -635,9 +1024,23 @@ window.addEventListener('click', function(event) {
     }
 });
 
-// Export functions for global access (if needed)
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.getElementById('profile-dropdown');
+    const profileMenu = document.querySelector('.agb-profile-menu');
+    
+    if (dropdown && profileMenu && !profileMenu.contains(event.target)) {
+        dropdown.classList.add('agb-hidden');
+    }
+});
+
+// Export functions for global access
 window.editSection = editSection;
 window.closeModal = closeModal;
 window.changePassword = changePassword;
-window.updateNotifications = updateNotifications;
-window.downloadProfile = downloadProfile;
+window.openImageUpload = openImageUpload;
+window.handleImageUpload = handleImageUpload;
+window.removeProfileImage = removeProfileImage;
+window.toggleProfileMenu = toggleProfileMenu;
+window.handleImageLoad = handleImageLoad;
+window.handleImageError = handleImageError;

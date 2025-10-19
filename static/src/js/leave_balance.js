@@ -222,6 +222,8 @@ function showError(message) {
     }
 }
 
+
+
 // Show no data message
 function showNoData() {
     const grid = document.getElementById('leave-balance-grid');

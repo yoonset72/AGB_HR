@@ -1,191 +1,311 @@
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <template id="employee_profile_template" name="Employee Profile">
     <head>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"/>    
-      <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/register.css"/>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"/>    
       <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/profile.css"/>
        <script type="text/javascript" src="/AGB_HR/static/src/js/profile.js"/>
        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
        <meta name="csrf-token" t-att-content="request.csrf_token()"/>
+       <title>AGB Communication - Employee Profile</title>
     </head>
--    <body>
-      <div class="agb-container">
-        <!-- Company Header -->
-        <div class="agb-header">
-          <div class="agb-logo">
-            <img src="/AGB_HR/static/src/img/logo.png" alt="AGB Communication Logo" class="agb-logo-img"/>
-          </div>
-          <h1 class="agb-company-name">AGB Communication</h1>
-          <p class="agb-company-subtitle">Myanmar • Employee Portal</p>
-          <div class="agb-contact-info">
-            <span><i class="fa fa-phone"></i> +959-765492075</span>
-            <span><i class="fa fa-envelope"></i> hr@agbcommunication.com</span>
-          </div>
-        </div>
-
-        <!-- Navigation -->
-        <div class="agb-nav">
-          <a href="/employee/dashboard" class="agb-nav-link">
-            <i class="fa fa-dashboard"></i> Dashboard
-          </a>
-          <a href="/employee/profile" class="agb-nav-link active">
-            <i class="fa fa-user"></i> Profile
-          </a>
-          <a href="/leave/requests" class="agb-nav-link">
-            <i class="fa fa-calendar"></i> Leave Request
-          </a>
-          <a href="/employee/register" class="agb-nav-link logout">
-            <i class="fa fa-sign-out"></i> Logout
-          </a>
-        </div>
-
-        <!-- Profile Content -->
-        <div class="agb-profile-container">
-          <!-- Profile Header Card -->
-          <div class="agb-form-card agb-profile-header">
-            <div class="agb-form-header">
-              <div class="agb-profile-photo">
-                <t t-if="employee.image_1920">
-                  <img t-att-src="'data:image/png;base64,' + employee.image_1920.decode('utf-8')" 
-                       class="agb-profile-img" 
-                       alt="Employee Photo" />
-                </t>
-                <t t-else="">
-                  <div class="agb-profile-avatar">
-                    <i class="fa fa-user"></i>
-                  </div>
-                </t>
-              </div>
-              <div class="agb-profile-welcome">
-                <h2>Welcome, <t t-esc="employee.name or 'Not Set'"/></h2>
-                <p><t t-esc="employee.department_id.name if employee.department_id else 'Department'"/></p>
-                <p><t t-esc="employee.job_title or 'Position'"/></p>
-              </div>
-              
+    <body>
+      <!-- Main App Container -->
+      <div class="agb-app-container">
+        
+        <!-- Sticky Top Navigation -->
+        <div class="agb-top-nav agb-sticky-header">
+          <div class="agb-nav-content">
+            <div class="agb-nav-left">
+              <button class="agb-btn agb-btn-ghost agb-back-btn" onclick="window.history.back()">
+                <i class="fa fa-arrow-left"></i>
+                <span class="agb-btn-text">Back to Dashboard</span>
+              </button>
+              <h1 class="agb-nav-title">Employee Profile</h1>
             </div>
-          </div>
-
-          <!-- Profile Information Grid -->
-          <div class="agb-profile-grid">
-            <!-- Personal Information -->
-            <div class="agb-form-card">
-              <div class="agb-card-header">
-                <h3><i class="fa fa-user"></i> Personal Information</h3>
-                <button class="agb-btn-edit" onclick="editSection('personal')">
-                  <i class="fa fa-edit"></i> Edit
-                </button>
-              </div>
-              <div class="agb-card-content">
-                <div class="agb-info-grid">
-                  <div class="agb-info-item">
-                    <label>Full Name</label>
-                    <span data-field="name"><t t-esc="employee.name or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Employee ID</label>
-                    <span data-field="employee_number"><t t-esc="employee.employee_number or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Gender</label>
-                    <span data-field="gender"><t t-esc="employee.gender or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Date of Birth</label>
-                    <span data-field="birthday"><t t-esc="employee.birthday or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>NRC Number</label>
-                    <span data-field="nrc_full"><t t-esc="employee.nrc_full or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Nationality</label>
-                    <span data-field="country_id.name"><t t-esc="employee.country_id.name or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Marital Status</label>
-                    <span data-field="marital"><t t-esc="employee.marital or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>SSB Registration No</label>
-                    <span data-field="permit_no"><t t-esc="employee.permit_no or 'Not Set'"/></span>
-                  </div>
+            
+            <div class="agb-nav-actions">
+              <!-- Welcome message with waving hand -->
+              <span class="agb-nav-welcome">
+                <span>Welcome, <t t-esc="employee.name"/>!</span>
+                <span class="agb-wave-emoji">👋</span>
+              </span>
+              
+              <!-- Profile Menu -->
+              <div class="agb-profile-menu">
+                <div class="agb-profile-initials" onclick="toggleProfileMenu()">
+                  <t t-esc="employee.name[:2].upper() if employee.name else 'EM'"/>
+                </div>
+                <div id="profile-dropdown" class="agb-profile-dropdown agb-hidden">
+                  <a href="/attendance/logout" class="agb-profile-item agb-logout">
+                    <i class="fa fa-sign-out"></i> Logout
+                  </a>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <!-- Work Information -->
-            <div class="agb-form-card">
-              <div class="agb-card-header">
-                <h3><i class="fa fa-briefcase"></i> Work Information</h3>
+        <!-- Main Content Wrapper -->
+        <div class="agb-main-content">
+          <!-- Profile Content Grid -->
+          <div class="agb-profile-grid">
+            
+            <!-- Profile Card -->
+            <div class="agb-profile-main-card">
+              <!-- Profile Header with Image Upload -->
+              <div class="agb-profile-header">
+                <div class="agb-profile-image-container" onclick="openImageUpload()">
+                  <t t-if="employee.image_1920">
+                    <img id="profile-image" 
+                        t-att-src="'/web/image/hr.employee/' + str(employee.id) + '/image_1920'" 
+                        class="agb-profile-image" 
+                        alt="Employee Photo"
+                        onerror="handleImageError(this)"
+                        onload="handleImageLoad(this)" />
+                  </t>
+
+                  <t t-else="">
+                    <div class="agb-profile-avatar" id="profile-avatar">
+                      <i class="fa fa-user"></i>
+                    </div>
+                  </t>
+                  
+                  <!-- Edit Indicator -->
+                  <div class="agb-profile-edit-indicator">
+                    <i class="fa fa-edit"></i>
+                  </div>
+                  
+                  <!-- Hover Overlay -->
+                  <div class="agb-profile-overlay">
+                    <i class="fa fa-camera"></i>
+                  </div>
+                  
+                  <!-- Remove Button (when image exists) -->
+                  <t t-if="employee.image_1920">
+                    <button class="agb-profile-remove-btn" onclick="removeProfileImage(event)">
+                      <i class="fa fa-times"></i>
+                    </button>
+                  </t>
+                  
+                  <!-- Loading Indicator -->
+                  <div id="image-loading" class="agb-image-loading" style="display: none;">
+                    <i class="fa fa-spinner fa-spin"></i>
+                  </div>
+                </div>
+                
+                <div class="agb-profile-info">
+                  <h2 class="agb-profile-name"><t t-esc="employee.name or 'Not Set'"/></h2>
+                  <div class="agb-profile-status agb-status-active">
+                    <t t-esc="'Active' if employee.active else 'Inactive'"/>
+                  </div>
+                </div>
+                <div class="agb-stats-row">
+                <div class="agb-stat-card">
+                  <div class="agb-stat-icon agb-stat-experience">
+                    <i class="fa fa-users"></i>
+                  </div>
+                  <div class="agb-stat-content">
+                    <h3>2.5</h3>
+                    <p>Years Experience</p>
+                  </div>
+                </div>
+                
+                <div class="agb-stat-card">
+                  <div class="agb-stat-icon agb-stat-attendance">
+                    <i class="fa fa-clock-o"></i>
+                  </div>
+                  <div class="agb-stat-content">
+                    <h3>95%</h3>
+                    <p>Attendance Rate</p>
+                  </div>
+                </div>
               </div>
-              <div class="agb-card-content">
-                <div class="agb-info-grid">
-                  <div class="agb-info-item">
+              </div>
+
+              <!-- Quick Contact Info -->
+              <!-- <div class="agb-quick-contact">
+                <div class="agb-contact-item">
+                  <i class="fa fa-envelope"></i>
+                  <div>
+                    <label>Email</label>
+                    <span><t t-esc="employee.work_email or 'Not Set'"/></span>
+                  </div>
+                </div>
+                <div class="agb-contact-item">
+                  <i class="fa fa-phone"></i>
+                  <div>
+                    <label>Phone</label>
+                    <span><t t-esc="employee.mobile_phone or 'Not Set'"/></span>
+                  </div>
+                </div>
+                <div class="agb-contact-item">
+                  <i class="fa fa-briefcase"></i>
+                  <div>
+                    <label>Position</label>
+                    <span><t t-esc="employee.job_title or 'Not Set'"/></span>
+                  </div>
+                </div>
+                <div class="agb-contact-item">
+                  <i class="fa fa-building"></i>
+                  <div>
                     <label>Department</label>
                     <span><t t-esc="employee.department_id.name if employee.department_id else 'Not Set'"/></span>
                   </div>
-                  <div class="agb-info-item">
-                    <label>Job Position</label>
-                    <span><t t-esc="employee.job_title or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Date of Employment</label>
+                </div>
+                <div class="agb-contact-item">
+                  <i class="fa fa-calendar"></i>
+                  <div>
+                    <label>Join Date</label>
                     <span><t t-esc="employee.join_date or 'Not Set'"/></span>
                   </div>
-                  <div class="agb-info-item">
-                    <label>Approver of leave Request</label>
-                    <span><t t-esc="employee.hr_officer_ids.name or 'Not Set'"/></span>
+                </div>
+                <div class="agb-contact-item">
+                  <i class="fa fa-id-badge"></i>
+                  <div>
+                    <label>Employee ID</label>
+                    <span><t t-esc="employee.employee_number or 'Not Set'"/></span>
                   </div>
-                  <div class="agb-info-item">
-                    <label>Work Email</label>
-                    <span><t t-esc="employee.work_email or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Work Location</label>
-                    <span>AGB Communication</span>
+                </div>
+              </div> -->
+
+              <!-- Edit Profile Button -->
+              <!-- <button class="agb-btn agb-btn-primary agb-edit-profile-btn" onclick="editProfile()">
+                <i class="fa fa-edit"></i>
+                <span>Edit Profile Information</span>
+              </button> -->
+            </div>
+
+            <!-- Information Cards -->
+            <div class="agb-info-cards">
+              
+              <!-- Quick Stats Cards -->
+              
+
+              <!-- Personal Information Card -->
+              <div class="agb-form-card">
+                <div class="agb-card-header">
+                  <h3><i class="fa fa-user"></i> Personal Information</h3>
+                  <button class="agb-btn-edit" onclick="editSection('personal')">
+                    <i class="fa fa-edit"></i> Edit
+                  </button>
+                </div>
+                <div class="agb-card-content">
+                  <div class="agb-info-grid">
+                    <div class="agb-info-item">
+                      <label>Full Name</label>
+                      <span data-field="name"><t t-esc="employee.name or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Employee ID</label>
+                      <span data-field="employee_number"><t t-esc="employee.employee_number or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Gender</label>
+                      <span data-field="gender"><t t-esc="employee.gender or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Date of Birth</label>
+                      <span data-field="birthday"><t t-esc="employee.birthday or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>NRC Number</label>
+                      <span data-field="nrc_full"><t t-esc="employee.nrc_full or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Nationality</label>
+                      <span data-field="country_id.name"><t t-esc="employee.country_id.name or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Marital Status</label>
+                      <span data-field="marital"><t t-esc="employee.marital or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>SSB Registration No</label>
+                      <span data-field="permit_no"><t t-esc="employee.permit_no or 'Not Set'"/></span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Education + Contact Information + Account Setting -->
-            <div class="agb-form-card">
-              <div class="agb-card-header">
-                <h3><i class="fa fa-graduation-cap"></i> Education Information</h3>
-                <button class="agb-btn-edit" onclick="editSection('education')">
-                  <i class="fa fa-edit"></i> Edit
-                </button>
-              </div>
-              <div class="agb-card-content">
-                <div class="agb-info-grid">
-                  <div class="agb-info-item">
-                    <label>Highest Level of Education</label>
-                    <span data-field="certificate"><t t-esc="employee.certificate or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Specialization</label>
-                    <span data-field="study_field"><t t-esc="employee.study_field or 'Not Set'"/></span>
-                  </div>
-                  <br/>
-                  <h3><i class="fa fa-address-book"></i> Contact Information</h3>
-                  <div class="agb-info-item full-width">
-                    <label>Home Address</label>
-                    <span data-field="home_address"><t t-esc="employee.home_address or'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Personal Phone</label>
-                    <span data-field="personal_phone"> <t t-esc="employee.personal_phone or 'Not Set'"/></span>
-                  </div>
-                  <div class="agb-info-item">
-                    <label>Personal Email</label>
-                    <span data-field="personal_email"><t t-esc="employee.personal_email or 'Not Set'"/></span>
-                  </div>
-                  <br/>
-                  <h3><i class="fa fa-cog"></i> Account Settings</h3>
-                  <div class="agb-settings-actions">
-                  <button class="agb-btn agb-btn-outline" onclick="changePassword()">
-                    <i class="fa fa-lock"></i> Change Password
+              <!-- Work Information Card -->
+              <div class="agb-form-card">
+                <div class="agb-card-header">
+                  <h3><i class="fa fa-briefcase"></i> Work Information</h3>
+                  <button class="agb-btn-edit" onclick="editSection('work')">
+                    <i class="fa fa-edit"></i> Edit
                   </button>
+                </div>
+                <div class="agb-card-content">
+                  <div class="agb-info-grid">
+                    <div class="agb-info-item">
+                      <label>Job Title</label>
+                      <span data-field="job_title"><t t-esc="employee.job_title or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Department</label>
+                      <span data-field="department_id.name"><t t-esc="employee.department_id.name if employee.department_id else 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Manager</label>
+                      <span data-field="parent_id.name"><t t-esc="employee.parent_id.name if employee.parent_id else 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Work Phone</label>
+                      <span data-field="work_phone"><t t-esc="employee.work_phone or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Work Email</label>
+                      <span data-field="work_email"><t t-esc="employee.work_email or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Work Location</label>
+                      <span>AGB Communication</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Education + Contact Information -->
+              <div class="agb-form-card">
+                <div class="agb-card-header">
+                  <h3><i class="fa fa-graduation-cap"></i> Education &amp; Contact</h3>
+                  <button class="agb-btn-edit" onclick="editSection('education')">
+                    <i class="fa fa-edit"></i> Edit
+                  </button>
+                </div>
+                <div class="agb-card-content">
+                  <div class="agb-info-grid">
+                    <div class="agb-info-item">
+                      <label>Highest Level of Education</label>
+                      <span data-field="certificate"><t t-esc="employee.certificate or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Specialization</label>
+                      <span data-field="study_field"><t t-esc="employee.study_field or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item agb-full-width">
+                      <label>Home Address</label>
+                      <span data-field="home_address"><t t-esc="employee.home_address or'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Personal Phone</label>
+                      <span data-field="personal_phone"> <t t-esc="employee.personal_phone or 'Not Set'"/></span>
+                    </div>
+                    <div class="agb-info-item">
+                      <label>Personal Email</label>
+                      <span data-field="personal_email"><t t-esc="employee.personal_email or 'Not Set'"/></span>
+                    </div>
+                  </div>
+                  
+                  <div class="agb-section-divider">
+                    <h4><i class="fa fa-cog"></i> Account Settings</h4>
+                  </div>
+                  
+                  <div class="agb-settings-actions">
+                    <button class="agb-btn agb-btn-outline" onclick="changePassword()">
+                      <i class="fa fa-lock"></i> Change Password
+                    </button>
                   </div>
                 </div>
               </div>
@@ -200,34 +320,39 @@
         </div>
       </div>
 
-      <!-- Edit Modal (Hidden by default) -->
+      <!-- Hidden File Input for Image Upload -->
+      <input type="file" id="profile-image-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)"/>
+      
+      <!-- Edit Modal -->
       <div id="editModal" class="agb-modal" style="display: none;">
+        <div class="agb-modal-overlay"></div>
         <div class="agb-modal-content">
           <div class="agb-modal-header">
             <h3 id="modalTitle">Edit Information</h3>
-            <button class="agb-modal-close" onclick="closeModal()">
+            <button type="button" class="agb-modal-close" onclick="closeModal()">
               <i class="fa fa-times"></i>
             </button>
           </div>
-          <div class="agb-modal-body">
-            <form id="editForm" action="/employee/profile/update" method="post">
-              <div id="editFields">
-                <!-- Dynamic fields will be inserted here -->
-              </div>
-              <div class="agb-modal-actions">
-                <button type="button" class="agb-btn agb-btn-outline" onclick="closeModal()">
-                  Cancel
-                </button>
-                <button type="submit" class="agb-btn agb-btn-primary">
-                  <i class="fa fa-save"></i> Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
+          
+          <form id="editForm" class="agb-modal-body">
+            <div id="editFields">
+              <!-- Dynamic form fields will be inserted here -->
+            </div>
+            
+            <div class="agb-modal-footer">
+              <button type="button" class="agb-btn agb-btn-secondary" onclick="closeModal()">
+                <i class="fa fa-times"></i> Cancel
+              </button>
+              <button type="submit" class="agb-btn agb-btn-primary">
+                <i class="fa fa-save"></i> Save Changes
+              </button>
+            </div>
+          </form>
         </div>
       </div>
-
+      
+      <!-- Toast Container -->
+      <div id="toast-container" class="agb-toast-container"></div>
     </body>
-    
   </template>
 </odoo>

@@ -176,7 +176,7 @@ class LeaveRequestForm {
                                     <!-- Employee Name -->
                                     <div class="form-item">
                                         <label class="form-label">
-                                        <i class="fa fa-user"></i> Employee
+                                        <i class="fa fa-user"></i> Name
                                         </label>
                                         <input type="hidden" name="employee_number" value="${this.employeeNumber}" />
                                         <input type="text" class="form-control" value="${this.employeeName}" readonly />
@@ -184,14 +184,16 @@ class LeaveRequestForm {
 
                                     <!-- Employee Number -->
                                     <div class="form-item">
-                                        <label class="form-label">Employee Number</label>
+                                        <label class="form-label">
+                                            <i class="fa-solid fa-address-card"></i> ID
+                                        </label>
                                         <input type="text" class="form-control" value="${this.employeeNumber}" readonly />
                                     </div>
                                     </div>
                                 </div>
 
                          <!-- Time Off Type Selection -->
-                        <div class="form-section">
+                        <div class="form-section" style="margin-top: 30px";>
                             <h3><i class="fa fa-calendar"></i> Leave Type 
                                 (All the leave types cannot be requested for past date!)
                             </h3>
@@ -340,7 +342,6 @@ class LeaveRequestForm {
                                                 <input type="radio" name="holiday_status_id" value="${type.id}" id="type_${type.id}">
                                                 <div class="time-off-type-name">${type.name}</div>
                                             </div>
-                                            <span class="time-off-type-badge">${type.requires_allocation ? 'Allocated' : 'Unlimited'}</span>
                                             <div class="leave-balance-info">
                                                 ${extraInfo}
                                             </div>
@@ -353,7 +354,7 @@ class LeaveRequestForm {
 
                         
                         <!-- Date Range -->
-                        <div class="form-section">
+                        <div class="form-section" style="margin-top: 30px">
                             <h3><i class="fa fa-calendar-alt"></i> Duration</h3>
                             <div class="date-range">
                                 <div>
@@ -372,9 +373,20 @@ class LeaveRequestForm {
                                     </label>
                                     <input type="date" name="request_date_to" class="form-control" required>
                                 </div>
-                                <div style="font-weight: 600; color: #D32F2F; font-size: 14px;">
-                                    <input type="checkbox" name="half_day" id="half_day">
-                                    <label for="half_day_to">Half Day</label>
+                                <div class="half-day-row">
+                                    <div style="font-weight: 600; color: #D32F2F; font-size: 14px; display: flex; align-items: center; gap: 8px;">
+                                        <input type="checkbox" name="half_day" id="half_day">
+                                        <label for="half_day">Half Day</label>
+                                    </div>
+
+                                    <!-- Dropdown -->
+                                    <div id="half_day_options" style="display: none;">
+                                        <select id="half_day_type" name="half_day_type" required>
+                                            <option value="" disabled selected>-- Select Half Day --</option>
+                                            <option value="morning">Morning</option>
+                                            <option value="evening">Evening</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -387,13 +399,10 @@ class LeaveRequestForm {
                         <div id="attachmentContainer" style="display: none;"></div>
                       
                         <!-- Description -->
-                        <div class="form-section">
-                            <h3><i class="fa fa-file-text"></i> Description</h3>
+                        <div class="form-section" style="margin-top: 30px">
+                            <h3><i class="fa fa-comment"></i>
+                                    Reason for Leave *</h3>
                             <div class="form-group">
-                                <label class="form-label">
-                                    <i class="fa fa-comment"></i>
-                                    Reason for Leave *
-                                </label>
                                 <textarea name="name" class="form-control" rows="4" 
                                          placeholder="Please provide a reason for your time off request..." required></textarea>
                             </div>
@@ -440,7 +449,7 @@ class LeaveRequestForm {
         while (remaining > 0) {
             date.setDate(date.getDate() + 1);
             const day = date.getDay();
-            if (day !== 0 && day !== 6) remaining--; // skip Sat/Sun
+            if (day !== 0 && day !== 6) remaining--; 
         }
         return date;
     };
@@ -499,7 +508,6 @@ class LeaveRequestForm {
                         <h3><i class="fa fa-paperclip"></i>Attachment</h3>
                         <div class="form-group">
                             <label class="form-label">
-                                <i class="fa fa-paperclip"></i> Attachment for Evidence of Leave Request
                             </label>
                             <input type="file" name="attachment" class="form-control" 
                                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required>
@@ -556,11 +564,28 @@ class LeaveRequestForm {
             }
         });
     }
-
     // Half-day toggle
     if (halfDay) {
-        halfDay.addEventListener('change', () => this.calculateDuration());
+        const halfDayOptions = document.getElementById('half_day_options');
+        const halfDayType = document.getElementById('half_day_type');
+
+        halfDay.addEventListener('change', () => {
+            if (halfDay.checked) {
+                halfDayOptions.style.display = 'block';
+            } else {
+                halfDayOptions.style.display = 'none';
+                if (halfDayType) halfDayType.value = ""; // reset selection
+            }
+            this.calculateDuration();
+        });
+
+        if (halfDayType) {
+            halfDayType.addEventListener('change', () => {
+                this.calculateDuration();
+            });
+        }
     }
+
 }
 
 
@@ -580,6 +605,9 @@ class LeaveRequestForm {
         const fromDateVal = form.querySelector('[name="request_date_from"]').value;
         const toDateVal = form.querySelector('[name="request_date_to"]').value;
         const isHalfDay = form.querySelector('[name="half_day"]').checked;
+        const halfDayType = document.getElementById('half_day_type')?.value || "";
+        console.log("DEBUG (calculateDuration) Half Day Type Selected:", halfDayType);
+
 
         if (fromDateVal && toDateVal) {
             const from = new Date(fromDateVal);
@@ -589,15 +617,20 @@ class LeaveRequestForm {
                 this.formData.number_of_days = 0;
                 document.getElementById('durationDisplay').style.display = 'none';
                 this.showNotification("End date cannot be earlier than start date.", "error");
-                this.hasBlockingError = true;   // 🚫 mark blocking
+                this.hasBlockingError = true;
                 return;
             }
-
 
             let totalDays = Math.floor((to - from) / (1000 * 60 * 60 * 24)) + 1;
 
             if (isHalfDay) {
-                totalDays = totalDays / 2;
+                if (halfDayType === "morning" || halfDayType === "evening") {
+                    totalDays = 0.5;
+                } else {
+                    this.showNotification("Please select Morning or Evening for half-day leave.", "error");
+                    this.hasBlockingError = true;
+                    return; // stop here
+                }
             }
 
             this.formData.number_of_days = totalDays;
@@ -605,6 +638,8 @@ class LeaveRequestForm {
             document.getElementById('durationDisplay').style.display = 'block';
         }
     }
+
+
 
     async handleSubmit(e) {
         e.preventDefault();
@@ -619,6 +654,24 @@ class LeaveRequestForm {
         const formData = new FormData(form);
         formData.append('employee_number', this.employeeNumber);
         formData.append('number_of_days', this.formData.number_of_days);
+
+        // --- Half-day handling ---
+        const isHalfDay = form.querySelector('[name="half_day"]').checked;
+        const halfDayType = form.querySelector('[name="half_day_type"]')?.value || "";
+
+        if (isHalfDay) {
+            if (halfDayType !== "morning" && halfDayType !== "evening") {
+                this.showNotification("Please select Morning or Evening for half-day leave.", "error");
+                // this.hasBlockingError = true;
+                return;
+            }
+
+            formData.append('request_unit_half', true);
+            const period = (halfDayType === "morning") ? "am" : "pm";
+            formData.append('request_date_from_period', period);
+            formData.append('request_date_to_period', period);
+            formData.set('number_of_days', 0.5); 
+        }
 
         // --- Required fields validation ---
         const requiredFields = ['holiday_status_id', 'request_date_from', 'request_date_to', 'name'];
@@ -667,7 +720,7 @@ class LeaveRequestForm {
         minAnnualStart.setDate(today.getDate() + 3);
 
         if (this.formData.leaveTypeName === 'annual' && fromDate < minAnnualStart) {
-            this.showNotification("Annual leave must be requested at least 3 days in advance.", 'error');
+            this.showNotification("Annual leave must be requested at least 3 days in advance.", "error");
             this.hasBlockingError = true;
             return;
         }
@@ -685,7 +738,7 @@ class LeaveRequestForm {
             }
 
             const rpcResponse = await response.json();
-            const result = rpcResponse?.result || rpcResponse; // support both shapes
+            const result = rpcResponse?.result || rpcResponse; 
 
             if (result?.success) {
                 this.showNotification(result.message || 'Leave request submitted successfully!', 'success');
@@ -715,6 +768,7 @@ class LeaveRequestForm {
             this.setLoading(false);
         }
     }
+
 
    
     setLoading(loading) {

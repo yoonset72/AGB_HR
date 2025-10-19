@@ -367,6 +367,9 @@ class LeaveController(http.Controller):
             data = request.params
             files = request.httprequest.files
 
+            _logger.info("DEBUG: Form data received: %s", dict(data))
+            _logger.info("DEBUG: Files received: %s", list(files.keys()))
+
             required_fields = ['employee_number', 'holiday_status_id', 'request_date_from', 'request_date_to', 'name']
             for field in required_fields:
                 if not data.get(field):
@@ -384,6 +387,9 @@ class LeaveController(http.Controller):
             date_to = datetime.strptime(data['request_date_to'], '%Y-%m-%d').date()
             if date_from > date_to:
                 return request.make_response(json.dumps({'success': False, 'error': 'From date cannot be after to date'}), headers=[('Content-Type', 'application/json')])
+            
+
+            request_date_from_period = data.get('request_date_from_period') or False
 
             number_of_days = float(data.get('number_of_days') or 1)
             request_unit_half = data.get('half_day') == 'on'
@@ -398,6 +404,7 @@ class LeaveController(http.Controller):
                 'state': 'confirm',
                 'request_unit_half': request_unit_half,
                 'request_unit_hours': False,
+                'request_date_from_period': request_date_from_period,
             }
 
             if request.env.user.id != request.env.ref('base.public_user').id:

@@ -20,9 +20,21 @@
                             <span>Welcome, <t t-esc="employee.name"/>!</span>
                             <span class="text-2xl animate-wave">👋</span>
                         </span>      
-                        <a href="/attendance/logout" class="agb-btn agb-btn-link">
-                            <i class="fa fa-sign-out"></i> Logout
-                        </a>
+                        <div class="agb-profile-menu">
+                            <div class="agb-profile-initials" onclick="toggleProfileMenu()">
+                                <t t-esc="employee_initials"/>
+                            </div>
+                            <div id="profile-dropdown" class="agb-profile-dropdown hidden">
+                                <a href="/employee/profile" class="agb-btn agb-btn-link agb-profile-item">
+                                    <i class="fa fa-user"></i> Profile
+                                </a>
+                                <a href="/attendance/logout" class="agb-btn agb-btn-link agb-profile-item">
+                                    <i class="fa fa-sign-out"></i> Logout
+                                </a>
+                            </div>
+
+                        </div>
+
                     </div>
                 </div>
 
@@ -59,18 +71,22 @@
                                 </div>
                                 <div class="agb-stat-content">
                                     <h3>Leave</h3>
-                                    <!-- <div class="agb-stat-number"><t t-esc="stats['attendanceCount']"/></div> -->
+                                    <!-- ENHANCED: Show leave count including weekends -->
+                                    <div class="agb-stat-number">
+                                        <t t-esc="stats['leaveCount']"/>
+                                    </div>
                                     <p class="agb-stat-details">
-                                        Your Leves | 
+                                        Your Requested Leaves: <t t-esc="stats['leaveCount']"/> | 
                                         <a t-attf-href="/leave/balance" class="agb-stat-link agb-stat-link-orange">Balance</a> 
                                     </p>
                                 </div>
                                 <div class="agb-stat-action">
                                     <button class="agb-btn agb-btn-link" onclick="window.location.href='/leave/request'">
-                                        <i class="fa fa-info-circle"></i> To Request
+                                        <i class="fa fa-paper-plane"></i> To Request
                                     </button>
                                 </div>
                             </div>
+
                         </div>
 
                         <!-- Quick Info -->
@@ -94,7 +110,7 @@
                                         <span>Job Position: <strong><t t-esc="employee.job_title or 'No Position'"/></strong></span>
                                     </div>
                                     <div class="agb-info-item">
-                                        <i class="fa fa-clock-o"></i> 
+                                        <i class="fa fa-calendar-plus"></i>
                                         <span>Working Schedule: <strong><t t-esc="', '.join(employee.resource_calendar_ids.mapped('name')) or 'Standard Schedule (9:00 AM - 6:00 PM)'"/>
 </strong></span>
                                     </div>
@@ -116,7 +132,7 @@
         </body>
     </template>
 
-    <!-- Calendar Template -->
+    <!-- ENHANCED Calendar Template with Public Holiday Support -->
     <template id="attendance_calendar" name="Attendance Calendar">
         <head>
             <title>Attendance Calendar</title>
@@ -153,11 +169,11 @@
                             </button>
                         </div>
 
-                        <!-- ENHANCED: Updated legend with weekend leave styling -->
+                        <!-- ENHANCED: Updated legend with public holidays, weekend work, and weekend leave support -->
                         <div class="agb-calendar-legend">
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-present"></div>
-                                <span>Present/Check-in/out</span>
+                                <span>Present/Check-in/out (Including Weekends)</span>
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-absent"></div>
@@ -165,11 +181,11 @@
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-weekend"></div>
-                                <span>Weekend (No Work)</span>
+                                <span>Weekend (No Work/Leave)</span>
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-holiday"></div>
-                                <span>Holiday</span>
+                                <span>Public Holiday (Not Clickable)</span>
                             </div>
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot agb-dot-leave"></div>
@@ -178,6 +194,10 @@
                             <div class="agb-legend-item">
                                 <div class="agb-legend-dot" style="background: linear-gradient(135deg, #fef3c7 50%, #ecfdf5 50%);"></div>
                                 <span>Half Leave + Half Attendance</span>
+                            </div>
+                            <div class="agb-legend-item">
+                                <div class="agb-legend-dot" style="background: linear-gradient(135deg, #fef2f2 50%, #fef3c7 50%);"></div>
+                                <span>Invalid Half Leave (No Required Attendance)</span>
                             </div>
                         </div>
 
@@ -200,36 +220,48 @@
                                     <div class="agb-calendar-day agb-calendar-day-empty"></div>
                                 </t>
                                 
-                                <!-- ENHANCED: Calendar days with proper weekend leave styling, half-day leave support, and dual attendance dots -->
+                                <!-- ENHANCED: Calendar days with public holidays, weekend work, and improved styling -->
                                 <t t-foreach="calendar_data.items()" t-as="day_data">
                                     <t t-set="day" t-value="day_data[0]"/>
                                     <t t-set="data" t-value="day_data[1]"/>
                                     <div 
                                         t-attf-class="agb-calendar-day
+                                            #{data['status'] == 'public_holiday' and 'agb-calendar-public-holiday' or ''}
+                                            #{data['status'] == 'invalid_half_leave' and 'agb-calendar-invalid-half-leave' or ''}
                                             #{data['status'] == 'present' and 'agb-calendar-present' or ''}
                                             #{data['status'] == 'partial' and 'agb-calendar-partial' or ''}
-                                            #{data['status'] == 'absent' and 'agb-calendar-absent' or ''}
+                                            #{data['status'] == 'full_absent' and 'agb-calendar-absent agb-calendar-non-clickable' or ''}
+                                            #{data['status'] == 'partial_absent' and 'agb-calendar-partial-absent' or ''}
                                             #{data['status'] == 'leave' and 'agb-calendar-leave' or ''}
-                                            #{data['status'] == 'half_leave' and 'agb-calendar-half-leave' or ''}
-                                            #{data['is_weekend'] and not (data.get('has_check_in') or data.get('has_check_out') or data.get('leave')) and 'agb-calendar-weekend' or ''}
-                                            #{data['is_weekend'] and data.get('leave') and 'agb-calendar-weekend' or ''}
+                                            #{data['status'] == 'partial_leave' and 'agb-calendar-partial-leave' or ''}
+                                            #{data['status'] == 'weekend_leave' and 'agb-calendar-weekend-leave' or ''}
+                                            #{data['status'] == 'weekend_half_leave' and 'agb-calendar-weekend-half-leave' or ''}
+                                            #{data['status'] == 'weekend_present' and 'agb-calendar-weekend-present' or ''}
+                                            #{data['status'] == 'weekend_partial' and 'agb-calendar-weekend-partial' or ''}
+                                            #{data['status'] == 'weekend' and 'agb-calendar-weekend' or ''}
                                             #{data['is_today'] and 'agb-calendar-today' or ''}
-                                            #{data.get('is_future') and not data.get('leave') and 'agb-calendar-future' or ''}"
+                                            #{data['status'] == 'future' and 'agb-calendar-future' or ''}"
                                             
-                                        t-attf-onclick="showDayDetails(this)"
+                                        t-attf-onclick="#{data.get('is_clickable') and 'showDayDetails(this)' or ''}"
                                         t-attf-data-leave="#{ '1' if data.get('leave') else '0' }"
-                                        t-attf-data-is-half-leave="#{ '1' if data.get('is_half_leave') else '0' }"
+                                        t-attf-data-is-half-leave="#{ '1' if data.get('is_partial_leave') else '0' }"
                                         t-attf-data-has-attendance="#{ '1' if data.get('has_attendance') else '0' }"
                                         t-attf-data-is-weekend="#{ '1' if data.get('is_weekend') else '0' }"
                                         t-attf-data-has-check-in="#{ '1' if data.get('has_check_in') else '0' }"
                                         t-attf-data-has-check-out="#{ '1' if data.get('has_check_out') else '0' }"
+                                        t-attf-data-is-public-holiday="#{ '1' if data.get('is_public_holiday') else '0' }"
+                                        t-attf-data-working-hours="#{data['working_hours']}"
                                         t-attf-data-leave-name="#{data.get('leave_name','')}"
                                         t-attf-data-leave-state="#{data.get('leave_state','')}"
                                         t-attf-data-leave-reason="#{data.get('reason','')}"
                                         t-attf-data-leave-from="#{data.get('from_date','')}"
                                         t-attf-data-leave-to="#{data.get('to_date','')}"
+                                        t-attf-data-leave-duration="#{data.get('number_of_days','')}"
+                                        t-attf-data-leave-half-day-type="#{data.get('half_day_type','')}"
+                                        t-attf-data-is-invalid-half-leave="#{ '1' if data.get('is_invalid_half_leave') else '0' }"
                                         t-attf-data-first-approver="#{data.get('first_approver','')}"
                                         t-attf-data-second-approver="#{data.get('second_approver','')}"
+                                        t-attf-data-holiday-name="#{data.get('holiday_name','')}"
                                         t-attf-data-date="#{data['formatted_date']}"
                                         t-attf-data-checkin="#{data['check_in_time'] or 'Not recorded'}"
                                         t-attf-data-checkout="#{data['check_out_time'] or 'Not recorded'}"
@@ -240,8 +272,52 @@
                                         
                                         <span class="agb-day-number"><t t-esc="day"/></span>
 
-                                        <!-- ENHANCED: Leave display with proper weekend leave color (yellow not grey) -->
-                                        <t t-if="data.get('leave')">
+                                        <!-- ENHANCED: Status Dots - Show appropriate dots based on attendance status -->
+                                        <t t-if="data['status'] == 'present' or data['status'] == 'weekend_present'">
+                                            <!-- Full attendance: 2 green dots -->
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-left"></div>
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-right"></div>
+                                        </t>
+                                        <t t-elif="data['status'] == 'full_absent'">
+                                            <!-- Full absent: 2 red dots -->
+                                            <div class="agb-status-dot agb-status-dot-absent agb-status-dot-left"></div>
+                                            <div class="agb-status-dot agb-status-dot-absent agb-status-dot-right"></div>
+                                        </t>
+                                        <t t-elif="data['status'] == 'partial_absent'">
+                                            <!-- Partial absent: 2 green dots (but red background) -->
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-left"></div>
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-right"></div>
+                                        </t>
+                                        <t t-elif="data['status'] == 'partial_leave'">
+                                            <!-- Partial leave: 2 green dots (mixed background) -->
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-left"></div>
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-right"></div>
+                                        </t>
+                                        <t t-elif="data.get('has_check_in') and not data.get('has_check_out')">
+                                            <!-- Check-in only: 1 green, 1 red -->
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-left"></div>
+                                            <div class="agb-status-dot agb-status-dot-absent agb-status-dot-right"></div>
+                                        </t>
+                                        <t t-elif="not data.get('has_check_in') and data.get('has_check_out')">
+                                            <!-- Check-out only: 1 red, 1 green -->
+                                            <div class="agb-status-dot agb-status-dot-absent agb-status-dot-left"></div>
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-right"></div>
+                                        </t>
+                                        <t t-elif="data.get('has_check_in') and data.get('has_check_out')">
+                                            <!-- Both check-in and check-out: 2 green dots -->
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-left"></div>
+                                            <div class="agb-status-dot agb-status-dot-present agb-status-dot-right"></div>
+                                        </t>
+
+                                        <!-- ENHANCED: Public Holiday Display -->
+                                        <t t-if="data.get('is_public_holiday')">
+                                            <div class="agb-holiday-name">
+                                                <t t-esc="data['holiday_name']"/>
+                                            </div>
+                                        </t>
+
+                                        <!-- ENHANCED: Leave display with proper weekend leave styling -->
+                                        <t t-elif="data.get('leave')">
                                             <div class="agb-leave-display">
                                                 <span t-attf-class="agb-leave-text #{data.get('is_weekend') and 'agb-weekend-leave-text' or ''}">
                                                     <t t-esc="data['leave_name']"/>
@@ -250,15 +326,6 @@
                                             </div>
                                         </t>
 
-                                        <!-- ENHANCED: Show attendance dots with dual green dots support -->
-                                        <t t-if="not data.get('leave') or data.get('is_half_leave')">
-                                            <t t-if="not data['is_weekend'] or (data['is_weekend'] and (data.get('has_check_in') or data.get('has_check_out')))">
-                                                <div t-attf-class="agb-attendance-dots #{data.get('has_check_in') and data.get('has_check_out') and 'both-present' or ''}">
-                                                    <div t-attf-class="agb-attendance-dot #{data['has_check_in'] and 'agb-dot-present' or 'agb-dot-absent'}"></div>
-                                                    <div t-attf-class="agb-attendance-dot #{data['has_check_out'] and 'agb-dot-present' or 'agb-dot-absent'}"></div>
-                                                </div>
-                                            </t>
-                                        </t>
                                     </div>
                                 </t>
                             </div>
@@ -266,7 +333,7 @@
                     </div>
                 </div>
 
-                <!-- FIXED: Enhanced Day Details Modal with proper section handling -->
+                <!-- ENHANCED: Day Details Modal with weekend work support -->
                 <div id="day-details-modal" class="agb-day-details-modal">
                     <div class="agb-day-details-content">
                         <div class="agb-day-details-header">
@@ -276,6 +343,18 @@
                             </button>
                         </div>
                         <div class="agb-day-details-info">
+
+                            <!-- Public Holiday Section -->
+                            <div class="public-holiday-section" style="display:none;">
+                                <div class="agb-detail-row">
+                                    <span class="agb-detail-label"><i class="fa fa-star"></i> Holiday Name</span>
+                                    <span class="agb-detail-value" id="modal-holiday-name">Holiday</span>
+                                </div>
+                                <div class="agb-detail-row">
+                                    <span class="agb-detail-label"><i class="fa fa-info-circle"></i> Status</span>
+                                    <span class="agb-status-badge agb-status-weekend">PUBLIC HOLIDAY</span>
+                                </div>
+                            </div>
 
                             <!-- Attendance Section -->
                             <div class="attendance-section">
@@ -318,6 +397,9 @@
                                 <div class="agb-detail-row">
                                     <span class="agb-detail-label"><i class="fa fa-calendar"></i> To</span>
                                     <span class="agb-detail-value" id="modal-leave-to"></span>
+                                </div><div class="agb-detail-row">
+                                    <span class="agb-detail-label"><i class="fa fa-clock"></i> Duration</span>
+                                    <span class="agb-detail-value" id="modal-leave-duration"> </span>
                                 </div>
                                 <div class="agb-detail-row">
                                     <span class="agb-detail-label"><i class="fa fa-comment"></i> Reason</span>
@@ -343,7 +425,7 @@
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
                     <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.0 - Fixed</p>
+                    <p>Secure Employee Portal • Version 2.1 - Enhanced with Public Holidays and Weekend Work</p>
                 </div>
             </div>
         </body>
@@ -445,7 +527,7 @@
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
                     <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.0</p>
+                    <p>Secure Employee Portal • Version 2.1</p>
                 </div>
             </div>
         </body>
@@ -521,7 +603,7 @@
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
                     <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.0</p>
+                    <p>Secure Employee Portal • Version 2.1</p>
                 </div>
             </div>
         </body>
@@ -564,7 +646,7 @@
                 <!-- Sticky Footer -->
                 <div class="agb-footer agb-sticky-footer">
                     <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-                    <p>Secure Employee Portal • Version 2.0</p>
+                    <p>Secure Employee Portal • Version 2.1</p>
                 </div>
             </div>
         </body>
