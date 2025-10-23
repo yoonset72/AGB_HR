@@ -316,9 +316,9 @@
         </div>
 
         <!-- Footer -->
-        <div class="agb-footer">
-          <p>© 2024 AGB Communication Myanmar. All rights reserved.</p>
-          <p>Secure Employee Portal • Version 2.0</p>
+        <div class="agb-footer agb-sticky-footer">
+          <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
+          <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
         </div>
       </div>
 

@@ -156,7 +156,7 @@ class LeaveController(http.Controller):
 
             return result
 
-        except Exception as e:
+        except Exception as e: 
             _logger.exception("Error in get_leave_balance_with_tracker")
             return {'success': False, 'error': str(e)}
 
@@ -374,7 +374,7 @@ class LeaveController(http.Controller):
             _logger.info("DEBUG: Form data received: %s", dict(data))
             _logger.info("DEBUG: Files received: %s", list(files.keys()))
 
-            required_fields = ['employee_number', 'holiday_status_id', 'request_date_from', 'request_date_to', 'name']
+            required_fields = ['employee_number', 'holiday_status_id', 'request_date_from', 'request_date_to', 'reason']
             for field in required_fields:
                 if not data.get(field):
                     return request.make_response(json.dumps({'success': False, 'error': f'Missing required field: {field}'}), headers=[('Content-Type', 'application/json')])
@@ -399,7 +399,7 @@ class LeaveController(http.Controller):
             request_unit_half = data.get('half_day') == 'on'
 
             leave_values = {
-                'name': data['name'],
+                'reason': data['reason'],
                 'employee_id': employee.id,
                 'holiday_status_id': leave_type.id,
                 'request_date_from': date_from,
@@ -416,7 +416,6 @@ class LeaveController(http.Controller):
 
             leave_request = request.env['hr.leave'].sudo().create(leave_values)
 
-            # Attach file if provided
             if 'attachment' in files:
                 uploaded_file = files['attachment']
                 filename = secure_filename(uploaded_file.filename)
@@ -443,10 +442,12 @@ class LeaveController(http.Controller):
                 'date_to': date_to.strftime('%Y-%m-%d'),
                 'number_of_days': number_of_days,
                 'state': leave_request.state,
-                'description': leave_request.name,
+                'description': leave_request.reason,
             }
 
             request.session['last_leave_request'] = result_data
+
+            _logger.info("NANG: result_data: %s", result_data)
 
             return request.make_response(json.dumps({
                 'success': True,

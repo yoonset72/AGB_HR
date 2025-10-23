@@ -961,19 +961,34 @@ body {
 
 /* Footer */
 .agb-footer {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border-light);
+  background: white;
+  padding: 24px;
   text-align: center;
-  padding: 2rem;
-  margin-top: 4rem;
+  color: #6b7280;
+  font-size: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+  border-top: 1px solid #e2e8f0;
+  animation: fadeIn 1s ease-out;
+  width: 100%;
+}
+
+.agb-sticky-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.95);
 }
 
 .agb-footer p {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin: 0.25rem 0;
+  margin: 4px 0;
 }
+
+.agb-footer p:first-child {
+  font-weight: 600;
+  color: #475569;
+}
+
 
 /* Toast System */
 .agb-toast-container {

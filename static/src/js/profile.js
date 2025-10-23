@@ -1045,6 +1045,56 @@ document.addEventListener('click', function(event) {
     }
 });
 
+(function() {
+    let startY = 0, currentY = 0, isPulling = false;
+    const threshold = 60;
+    let refreshIcon = document.getElementById('pull-refresh-icon');
+    if (!refreshIcon) {
+        refreshIcon = document.createElement('div');
+        refreshIcon.id = 'pull-refresh-icon';
+        refreshIcon.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+        document.body.appendChild(refreshIcon);
+    }
+
+    function touchStartHandler(e) {
+        if (window.scrollY === 0) {
+            startY = e.touches[0].clientY;
+            isPulling = true;
+            refreshIcon.style.top = '20px';
+            refreshIcon.style.opacity = '0';
+        }
+    }
+
+    function touchMoveHandler(e) {
+        if (!isPulling) return;
+        currentY = e.touches[0].clientY;
+        let deltaY = currentY - startY;
+
+        if (deltaY > 0) {
+            refreshIcon.style.display = 'block';
+            refreshIcon.style.top = `${20 + deltaY / 2}px`;
+            refreshIcon.style.opacity = Math.min(deltaY / threshold, 1);
+            refreshIcon.classList.toggle('ready', deltaY > threshold);
+        }
+    }
+
+    function touchEndHandler() {
+        if (!isPulling) return;
+        let deltaY = currentY - startY;
+        if (deltaY > threshold) {
+            refreshIcon.innerHTML = '<i class="fa fa-spinner fa-spin"></i>';
+            setTimeout(() => window.location.reload(), 200);
+        } else {
+            refreshIcon.style.display = 'none';
+        }
+        isPulling = false;
+    }
+
+    document.addEventListener('touchstart', touchStartHandler, { passive: true });
+    document.addEventListener('touchmove', touchMoveHandler, { passive: true });
+    document.addEventListener('touchend', touchEndHandler);
+})();
+
 // Export functions for global access
 window.editSection = editSection;
 window.closeModal = closeModal;

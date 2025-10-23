@@ -14,7 +14,7 @@ class LeaveRequestForm {
             holiday_status_id: 0,
             request_date_from: '',
             request_date_to: '',
-            name: '',
+            reason: '',
             number_of_days: 0
         };
         console.log('DEBUG: employee_number from data attribute:', this.employeeNumber);
@@ -462,7 +462,7 @@ class LeaveRequestForm {
                             <h3><i class="fa fa-comment"></i>
                                     Reason for Leave *</h3>
                             <div class="form-group">
-                                <textarea name="name" class="form-control" rows="4" 
+                                <textarea name="reason" class="form-control" rows="4" 
                                          placeholder="Please provide a reason for your time off request..." required></textarea>
                             </div>
                         </div>
@@ -569,7 +569,7 @@ class LeaveRequestForm {
                             <label class="form-label">
                             </label>
                             <input type="file" name="attachment" class="form-control" 
-                                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" required>
+                                 accept="image/*"  required>
                         </div>
                     </div>
                 `;
@@ -764,10 +764,10 @@ class LeaveRequestForm {
         }
 
         // --- Required fields validation ---
-        const requiredFields = ['holiday_status_id', 'request_date_from', 'request_date_to', 'name'];
+        const requiredFields = ['holiday_status_id', 'request_date_from', 'request_date_to', 'reason'];
         for (let field of requiredFields) {
             const value = formData.get(field);
-            if (!value || (field === 'name' && value.trim() === '')) {
+            if (!value || (field === 'reason' && value.trim() === '')) {
                 this.showNotification('Please fill in all required fields', 'error');
                 return;
             }
