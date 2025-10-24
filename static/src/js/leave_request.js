@@ -152,7 +152,8 @@ class LeaveRequestForm {
         const payload = {
             employee_number: this.employeeNumber,
             request_date_from: fromDate,
-            request_date_to: toDate
+            request_date_to: toDate,
+            holiday_status_id: this.formData.holiday_status_id
         };
 
         // ✅ Use arrow function to preserve 'this'

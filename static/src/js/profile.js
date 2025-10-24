@@ -674,6 +674,7 @@ function handleImageFile(file) {
             updateProfileImagePreview(data.image_url);
             showToast('Image uploaded', 'Your profile image has been updated successfully', 'success');
             showRemoveButton(true);
+            location.reload();  
         } else {
             showToast('Upload failed', data.error || 'Failed to upload image', 'error');
         }

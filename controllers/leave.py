@@ -516,6 +516,14 @@ class LeaveController(http.Controller):
             employee_number = data.get('employee_number')
             request_date_from = data.get('request_date_from')
             request_date_to = data.get('request_date_to')
+            leave_type_id = data.get('holiday_status_id')
+
+            leave_type = request.env['hr.leave.type'].sudo().browse(int(leave_type_id)) if leave_type_id else None
+            leave_type_name = leave_type.name if leave_type and leave_type.exists() else 'N/A'
+
+            _logger.info('leave_type_name: %s', leave_type_name)
+
+            _logger.info("Debug: received data for leave validation: %s", data)
 
             # Validate input presence
             if not employee_number or not request_date_from or not request_date_to:
@@ -560,9 +568,10 @@ class LeaveController(http.Controller):
             before_leaves = request.env['hr.leave'].sudo().search([
                 ('employee_id', '=', employee.id),
                 ('state', 'in', ['confirm', 'validate', 'validate1']),
+                ('holiday_status_id.name', '=', 'Casual Leave'),
                 ('request_date_to', '=', date_from - timedelta(days=1))
             ])
-            if before_leaves:
+            if before_leaves or leave_type_name.lower() == 'casual leave':
                 errors = []
                 for leave in before_leaves:
                     # Format the leave dates nicely
@@ -572,16 +581,17 @@ class LeaveController(http.Controller):
                         errors.append(f"{leave.request_date_from.strftime('%b %d')} and {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
                 return {
                     'success': False,
-                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave before the start date"
+                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave before the requested start date"
                 }
 
             # Check leaves after end date
             after_leaves = request.env['hr.leave'].sudo().search([
                 ('employee_id', '=', employee.id),
                 ('state', 'in', ['confirm', 'validate', 'validate1']),
+                ('holiday_status_id.name', '=', 'Casual Leave'),
                 ('request_date_from', '=', date_to + timedelta(days=1))
             ])
-            if after_leaves:
+            if after_leaves or leave_type_name.lower() == 'casual leave':
                 errors = []
                 for leave in after_leaves:
                     if leave.request_date_from == leave.request_date_to:
@@ -590,7 +600,7 @@ class LeaveController(http.Controller):
                         errors.append(f"{leave.request_date_from.strftime('%b %d')} and {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
                 return {
                     'success': False,
-                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave after the end date"
+                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave after the requested end date"
                 }
 
             return {'success': True}
