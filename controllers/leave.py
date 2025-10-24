@@ -837,7 +837,7 @@ class LeaveController(http.Controller):
 
     def _get_system_start_date(self):
         """Define when your system started tracking leaves in hr_leave"""
-        return date(2025, 10, 20)  # Updated to match requirements
+        return date(2025, 10, 26)  # Updated to match requirements
 
     def _get_permanent_date(self, employee):
         """Get employee's permanent date"""
