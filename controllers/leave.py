@@ -522,26 +522,25 @@ class LeaveController(http.Controller):
             leave_type_name = leave_type.name if leave_type and leave_type.exists() else 'N/A'
 
             _logger.info('leave_type_name: %s', leave_type_name)
-
             _logger.info("Debug: received data for leave validation: %s", data)
 
-            # Validate input presence
+            # --- Validate input ---
             if not employee_number or not request_date_from or not request_date_to:
                 return {'success': False, 'error': 'Missing required parameters: employee_number, request_date_from, or request_date_to'}
 
-            # Parse dates
+            # --- Parse dates ---
             try:
                 date_from = datetime.strptime(request_date_from, '%Y-%m-%d').date()
                 date_to = datetime.strptime(request_date_to, '%Y-%m-%d').date()
             except Exception:
                 return {'success': False, 'error': 'Dates must be in string format: YYYY-MM-DD'}
 
-            # Find employee
+            # --- Find employee ---
             employee = request.env['hr.employee'].sudo().search([('employee_number', '=', employee_number)], limit=1)
             if not employee:
                 return {'success': False, 'error': 'Employee not found'}
 
-            # Check overlapping leaves
+            # --- Check overlapping leaves ---
             overlapping_leaves = request.env['hr.leave'].sudo().search([
                 ('employee_id', '=', employee.id),
                 ('state', 'in', ['confirm', 'validate', 'validate1']),
@@ -564,54 +563,56 @@ class LeaveController(http.Controller):
 
                 return {'success': False, 'error': "; ".join(errors)}
 
-            # Check leaves before start date
-            before_leaves = request.env['hr.leave'].sudo().search([
-                ('employee_id', '=', employee.id),
-                ('state', 'in', ['confirm', 'validate', 'validate1']),
-                ('holiday_status_id.name', '=', 'Casual Leave'),
-                ('request_date_to', '=', date_from - timedelta(days=1))
-            ])
-            if before_leaves or leave_type_name.lower() == 'casual leave':
-                errors = []
-                for leave in before_leaves:
-                    # Format the leave dates nicely
-                    if leave.request_date_from == leave.request_date_to:
-                        errors.append(f"{leave.request_date_from.strftime('%b %d')} is taken as {leave.holiday_status_id.display_name}")
-                    else:
-                        errors.append(f"{leave.request_date_from.strftime('%b %d')} and {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
-                return {
-                    'success': False,
-                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave before the requested start date"
-                }
+            # --- Check adjacent leaves only if current leave is casual ---
+            if leave_type_name.lower() == 'casual leave':
+                # Check leave before start date
+                before_leaves = request.env['hr.leave'].sudo().search([
+                    ('employee_id', '=', employee.id),
+                    ('state', 'in', ['confirm', 'validate', 'validate1']),
+                    ('request_date_to', '=', date_from - timedelta(days=1))
+                ])
 
-            # Check leaves after end date
-            after_leaves = request.env['hr.leave'].sudo().search([
-                ('employee_id', '=', employee.id),
-                ('state', 'in', ['confirm', 'validate', 'validate1']),
-                ('holiday_status_id.name', '=', 'Casual Leave'),
-                ('request_date_from', '=', date_to + timedelta(days=1))
-            ])
-            if after_leaves or leave_type_name.lower() == 'casual leave':
-                errors = []
-                for leave in after_leaves:
-                    if leave.request_date_from == leave.request_date_to:
-                        errors.append(f"{leave.request_date_from.strftime('%b %d')} is taken as {leave.holiday_status_id.display_name}")
-                    else:
-                        errors.append(f"{leave.request_date_from.strftime('%b %d')} and {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
-                return {
-                    'success': False,
-                    'error': "; ".join(errors) + " and casual leave cannot be combined with any other leave after the requested end date"
-                }
+                if before_leaves:
+                    errors = []
+                    for leave in before_leaves:
+                        if leave.request_date_from == leave.request_date_to:
+                            errors.append(f"{leave.request_date_from.strftime('%b %d')} is taken as {leave.holiday_status_id.display_name}")
+                        else:
+                            errors.append(f"{leave.request_date_from.strftime('%b %d')} to {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
 
+                    return {
+                        'success': False,
+                        'error': "; ".join(errors) + " — Casual leave cannot be combined with any other leave before the requested start date"
+                    }
+
+                # Check leave after end date
+                after_leaves = request.env['hr.leave'].sudo().search([
+                    ('employee_id', '=', employee.id),
+                    ('state', 'in', ['confirm', 'validate', 'validate1']),
+                    ('request_date_from', '=', date_to + timedelta(days=1))
+                ])
+
+                if after_leaves:
+                    errors = []
+                    for leave in after_leaves:
+                        if leave.request_date_from == leave.request_date_to:
+                            errors.append(f"{leave.request_date_from.strftime('%b %d')} is taken as {leave.holiday_status_id.display_name}")
+                        else:
+                            errors.append(f"{leave.request_date_from.strftime('%b %d')} to {leave.request_date_to.strftime('%b %d')} are taken as {leave.holiday_status_id.display_name}")
+
+                    return {
+                        'success': False,
+                        'error': "; ".join(errors) + " — Casual leave cannot be combined with any other leave after the requested end date"
+                    }
+
+            # --- Everything is valid ---
             return {'success': True}
 
-
         except Exception as e:
-            # Log exception and return JSON-safe response
-            print("ERROR - Exception in check_leave_valid:", e)
+            _logger.error("ERROR - Exception in check_leave_valid: %s", e)
             return {'success': False, 'error': str(e)}
 
-        
+            
 
     # @http.route('/api/leave-balance', type='json', auth='public', methods=['POST'], csrf=False)
     # def get_leave_balance_with_tracker(self, **kwargs):
