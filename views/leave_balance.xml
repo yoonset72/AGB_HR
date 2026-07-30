@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Leave Balance Page Template -->
     <template id="leave_balance_page" name="Leave Balance">
         <head>
             <title>Leave Balance</title>
@@ -13,11 +12,10 @@
         </head>
         <body>
             <div class="agb-app-container">
-                <!-- Sticky Top Navigation -->
+                <!-- Top Navigation -->
                 <div class="agb-top-nav agb-sticky-header">
                     <h1 class="agb-nav-title">Leave Balance Overview</h1>
-                     <div class="agb-nav-actions">
-                       
+                    <div class="agb-nav-actions">
                         <button class="agb-btn agb-btn-link" onclick="window.location.href='/attendance/dashboard'">
                             <i class="fa fa-arrow-left"></i> Dashboard
                         </button>
@@ -27,11 +25,11 @@
                     </div>
                 </div>
 
-                <!-- Main Content Wrapper -->
+                <!-- Main Content -->
                 <div class="agb-main-content-wrapper">
                     <div class="agb-dashboard-content">
-                        
-                        <!-- Employee Info Card -->
+
+                        <!-- Employee Info -->
                         <div class="agb-form-card agb-employee-info">
                             <div class="agb-form-header">
                                 <i class="fa fa-user"></i>
@@ -53,49 +51,13 @@
                             </div>
                         </div>
 
-                        <!-- Balance Grid Container -->
+                        <!-- Leave Balance Grid -->
                         <div id="leave-balance-grid" class="agb-balance-grid">
-                            <!-- Cards will be dynamically populated by JavaScript -->
-                            <t t-if="leave_balances">
-                                <t t-foreach="leave_balances" t-as="bal">
-                                    <div t-attf-class="agb-balance-card agb-balance-#{bal['type_class']}">
-                                        <!-- Card Header with Leave Type and Total -->
-                                        <div class="agb-balance-card-header">
-                                            <div class="agb-balance-title-section">
-                                                <h3 class="agb-balance-title"><t t-esc="bal['type']"/></h3>
-                                            </div>
-                                            <div class="agb-balance-total-badge">
-                                                <span class="agb-total-label">Total:</span>
-                                                <span class="agb-total-value"><t t-esc="bal['total']"/></span>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Metrics Grid -->
-                                        <div class="agb-balance-metrics-grid">
-                                            <div class="agb-metric-box agb-metric-taken">
-                                                <div class="agb-metric-value"><t t-esc="bal['taken']"/></div>
-                                                <div class="agb-metric-label">Taken</div>
-                                            </div>
-                                            <div class="agb-metric-box agb-metric-balance">
-                                                <div class="agb-metric-value"><t t-esc="bal['balance']"/></div>
-                                                <div class="agb-metric-label">Balance</div>
-                                            </div>
-                                            <div class="agb-metric-box agb-metric-pending">
-                                                <div class="agb-metric-value"><t t-esc="bal['pending']"/></div>
-                                                <div class="agb-metric-label">Pending</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </t>
-                            </t>
-                            <t t-else="">
-                                <div class="agb-loading-card">
-                                    <i class="fa fa-info-circle"></i>
-                                    <p>No leave data found.</p>
-                                </div>
-                            </t>
+                            <div class="agb-loading-card" id="loading-card">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                <p>Loading leave balances...</p>
+                            </div>
                         </div>
-
 
                         <!-- Legend -->
                         <div class="agb-form-card agb-balance-legend">
@@ -104,47 +66,37 @@
                                 <h3>Legend</h3>
                             </div>
                             <div class="agb-legend-grid">
-                                <div class="agb-legend-item">
-                                    <div class="agb-legend-dot agb-dot-total"></div>
-                                    <span>Total Allocation</span>
-                                </div>
-                                <div class="agb-legend-item">
-                                    <div class="agb-legend-dot agb-dot-taken"></div>
-                                    <span>Taken/Used</span>
-                                </div>
-                                <div class="agb-legend-item">
-                                    <div class="agb-legend-dot agb-dot-balance"></div>
-                                    <span>Available Balance</span>
-                                </div>
-                                <div class="agb-legend-item">
-                                    <div class="agb-legend-dot agb-dot-pending"></div>
-                                    <span>Pending Requests</span>
-                                </div>
+                                <div class="agb-legend-item"><div class="agb-legend-dot agb-dot-total"></div><span>Total</span></div>
+                                <div class="agb-legend-item"><div class="agb-legend-dot agb-dot-taken"></div><span>Taken</span></div>
+                                <div class="agb-legend-item"><div class="agb-legend-dot agb-dot-balance"></div><span>Available</span></div>
+                                <div class="agb-legend-item"><div class="agb-legend-dot agb-dot-pending"></div><span>Pending</span></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sticky Footer -->
+                <!-- Footer -->
                 <div class="agb-footer agb-sticky-footer">
-                    <p>copyright ©AGB Communication 2025 .All Rights Reserved.</p>
-                    <p>Secure Emplyee Attendance &amp; Leave Management System v1.0</p> 
+                    <p>©AGB Communication 2025. All Rights Reserved.</p>
+                    <p>Secure Employee Attendance &amp; Leave Management System v1.0</p>
                 </div>
             </div>
 
-            <!-- Hidden employee data for JavaScript -->
+            <!-- Hidden employee data -->
             <script type="text/javascript">
                 window.employeeData = {
-                    employee_number: '<t t-esc="employee.id"/>',
-                    employee_name: '<t t-esc="employee.name"/>',
-                    current_year: '<t t-esc="current_year"/>'
+                    id: '<t t-esc="employee.id"/>',
+                    name: '<t t-esc="employee.name"/>',
+                    year: '<t t-esc="current_year"/>'
                 };
             </script>
 
-            <!-- Notification Container -->
+            <!-- Notification container -->
             <div id="notification-container" class="agb-notification-container"></div>
         </body>
     </template>
+
+
 
     <!-- Updated Main Dashboard Template -->
     <template id="main_dashboard_updated" name="Attendance Dashboard - Updated Leave Card">

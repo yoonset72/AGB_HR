@@ -119,7 +119,7 @@ class LeaveController(http.Controller):
 
                     total_to_check = float(leave_balance.get('total_dynamic') or leave_balance.get('total') or 0)
                     available_to_store = total_to_check - taken_to_store
-
+                   
                     tracker_record.sudo().write({
                         'taken_leaves': taken_to_store,
                         'pending_requests': leave_balance.get('pending', 0),
@@ -778,14 +778,34 @@ class LeaveController(http.Controller):
 
                 if tracker_record:
                     leave_balance = self._update_existing_record(tracker_record, employee, today)
+
+                    # --- ✅ Ensure system_taken is stored in DB ---
+                    if 'system_taken' in leave_balance:
+                        tracker_record.sudo().write({
+                            'system_taken': leave_balance['system_taken']
+                        })
                 else:
                     leave_balance = self._create_tracker_record(
                         employee, leave_type, balance_dict, current_year
                     )
 
+
                 # --- Ensure all numeric fields exist ---
-                for key in ['total','total_dynamic','accrued_new','taken','available','pending','carried_forward','expired_carried']:
+                for key in ['total','total_dynamic','accrued_new','taken','available','pending','carried_forward','expired_carried','final_taken']:
                     leave_balance[key] = leave_balance.get(key) or 0
+
+                # --- Special logic for Annual Leave after cutoff date ---
+                if leave_type['name'] == 'annual':
+                    cutoff_date = date(today.year, 6, 30)
+                    if today > cutoff_date:
+                        _logger.info("⚙️ Applying post-cutoff logic for Annual Leave (after June 30)")
+                        # Replace available with total_dynamic - final_taken
+                        leave_balance['available'] = float(leave_balance.get('total_dynamic', 0)) - float(leave_balance.get('system_taken', 0))
+                        
+                        _logger.info(" ✅-> Recalculated available: %s", leave_balance['available'])
+                        # Ensure available isn't negative
+                        # if leave_balance['available'] < 0:
+                        #     leave_balance['available'] = 0
 
                 total_to_check = float(leave_balance.get('total_dynamic') or leave_balance.get('total') or 0)
 
@@ -806,7 +826,7 @@ class LeaveController(http.Controller):
 
     def _get_system_start_date(self):
         """Define when your system started tracking leaves in hr_leave"""
-        return date(2025, 10, 10)  # Updated to match requirements
+        return date(2025, 10, 20)  # Updated to match requirements
 
     def _get_permanent_date(self, employee):
         """Get employee's permanent date"""
@@ -972,11 +992,11 @@ class LeaveController(http.Controller):
                 
                 if record.leave_type_name == 'Annual Leave':
                     total_dynamic = total_allocation + accrual.get('accrued_new', 0)
-                    available = max(total_dynamic - total_taken, 0.0)
+                    available = total_dynamic - total_taken
                     system_taken = accrual.get('system_taken', total_taken)
                 else:
                     total_dynamic = total_allocation
-                    available = max(total_allocation - total_taken, 0.0)
+                    available = total_allocation - total_taken
                     system_taken = total_taken
 
                 record_vals = {
@@ -1008,11 +1028,11 @@ class LeaveController(http.Controller):
                 
                 if record.leave_type_name == 'Annual Leave':
                     total_dynamic = accrual['total']
-                    available = max(total_dynamic - total_taken, 0)
+                    available = total_dynamic - total_taken
                     system_taken = accrual.get('system_taken', total_taken)
                 else:
                     total_dynamic = total_allocation
-                    available = max(total_allocation - total_taken, 0)
+                    available = total_allocation - total_taken
                     system_taken = total_taken
 
                 record.sudo().write({
@@ -1066,7 +1086,7 @@ class LeaveController(http.Controller):
 
             pending = self._get_actual_pending_leaves(employee.id, record.leave_type_name, current_year)
             total_allocation = record.total_allocation or 0.0
-            available = max(total_allocation - total_taken, 0)
+            available = total_allocation - total_taken
 
             record.sudo().write({
                 'taken_leaves': total_taken,
@@ -1258,7 +1278,7 @@ class LeaveController(http.Controller):
 
         taken = self._get_actual_taken_leaves(employee.id, 'Casual Leave', current_year)
         pending = self._get_actual_pending_leaves(employee.id, 'Casual Leave', current_year)
-        available = max(total_casual - taken, 0)
+        available = total_casual - taken
 
         return {
             'total': total_casual,
@@ -1361,7 +1381,7 @@ class LeaveController(http.Controller):
                 final_taken = (tracker.taken_leaves or 0) + validated_taken
 
             pending = self._get_actual_pending_leaves(employee.id, 'Annual Leave', current_year)
-            available = max(total_dynamic - final_taken, 0)
+            available = total_dynamic - final_taken
 
             # Tracker branch return
             return {
@@ -1409,10 +1429,13 @@ class LeaveController(http.Controller):
             resp_expired = max(carry_from_last_year - total_taken, 0)
             final_taken = taken_from_new
 
+            _logger.info("New debug for final taken %s", final_taken)
+
             total = accrued_new + resp_carried
             total_dynamic = total
+            
 
-        available = max(total_dynamic - final_taken, 0)
+        available = total_dynamic - final_taken
         _logger.debug(
             "System calculation: total=%s, total_dynamic=%s, accrued_new=%s, carry_from_last_year=%s, final_taken=%s, available=%s",
             total, total_dynamic, accrued_new, carry_from_last_year, final_taken, available
@@ -1506,7 +1529,7 @@ class LeaveController(http.Controller):
             ('holiday_status_id.name', 'ilike', leave_type),
             ('request_date_from', '>=', start_of_year),
             ('request_date_to', '<=', end_of_year),
-            ('state', '=', 'confirm'),
+            ('state', 'in', ['confirm', 'validate1']),
         ])
         pending = sum(pending_leaves.mapped('number_of_days'))
         _logger.debug("Fixed leave calculation for %s: total=%s, taken=%s, pending=%s ,available=%s", leave_type, total_allocation, taken, pending, max(total_allocation - taken, 0))
@@ -1514,7 +1537,7 @@ class LeaveController(http.Controller):
         return {
             'total': total_allocation,
             'taken': taken,
-            'available': max(total_allocation - taken, 0),
+            'available': total_allocation - taken,
             'pending': pending,
             'carried_forward': 0,
             'expired_carried': 0
@@ -1532,7 +1555,7 @@ class LeaveController(http.Controller):
         pending_leaves = request.env['hr.leave'].sudo().search([
             ('employee_id', '=', employee_id),
             ('holiday_status_id.name', 'ilike', leave_type),
-            ('state', '=', 'confirm'),
+            ('state', 'in', ['confirm', 'validate1']),
         ])
         pending = sum(pending_leaves.mapped('number_of_days'))
         _logger.debug("Lifetime leave taken: %s, pending: %s", taken, pending)
@@ -1540,7 +1563,7 @@ class LeaveController(http.Controller):
         return {
             'total': total_allocation,
             'taken': taken,
-            'available': max(total_allocation - taken, 0),
+            'available': total_allocation - taken,
             'pending': pending,
             'carried_forward': 0,
             'expired_carried': 0
@@ -1575,7 +1598,7 @@ class LeaveController(http.Controller):
         domain = [
             ('employee_id', '=', employee_id),
             ('holiday_status_id.name', 'ilike', leave_type),
-            ('state', '=', 'confirm')
+            ('state', 'in', ['confirm', 'validate1'])
         ]
         
         # For lifetime leaves, don't filter by year

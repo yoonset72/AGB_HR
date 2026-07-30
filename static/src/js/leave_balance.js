@@ -56,19 +56,30 @@ async function loadLeaveBalances() {
         // 3. Merge leave types with balances
         const merged = {};
 
+       const today = new Date();
+        // 🗓️ Cutoff is June 30 of the current year
+        const cutoffDate = new Date(today.getFullYear(), 5, 30); 
         leaveTypes.forEach(type => {
             // Convert name like "Annual Leave" -> key "annual"
             const key = type.name.toLowerCase().split(' ')[0];
-
             const balanceData = leaveBalances[key] || {};
 
+            const isAnnual = key === 'annual';
+            const afterCutoff = today > cutoffDate;
+
             merged[key] = {
-                total: balanceData.total || 0,
-                taken: balanceData.taken || 0,
+                total: isAnnual
+                    ? (balanceData.total_dynamic || balanceData.total || 0)
+                    : (balanceData.total || 0),
+                taken: isAnnual && afterCutoff
+                    ? (balanceData.system_taken || 0)
+                    : (balanceData.taken || 0),
                 available: balanceData.available || 0,
                 pending: balanceData.pending || 0
             };
         });
+
+
 
         console.log("✅ Final merged leave balances:", merged);
 

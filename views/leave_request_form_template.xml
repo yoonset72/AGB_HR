@@ -11,6 +11,8 @@
                 <script type="text/javascript" src="/AGB_HR/static/src/js/leave_request.js"/>
                 <meta name="csrf-token" t-att-content="request.csrf_token()"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
+
             </head>
             <body>
                 <div class="agb-app-container">
@@ -62,6 +64,8 @@
                 <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/attendance_dashboard.css"/>
                 <link rel="stylesheet" type="text/css" href="/AGB_HR/static/src/css/leave_request.css"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+                <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
+
             </head>
             <body>
                 <div class="agb-app-container">

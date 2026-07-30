@@ -8,6 +8,8 @@
        <script type="text/javascript" src="/AGB_HR/static/src/js/profile.js"/>
        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
        <meta name="csrf-token" t-att-content="request.csrf_token()"/>
+        <link rel="shortcut icon" type="image/png" href="/AGB_HR/static/src/img/AGB_LOGO.png"/>
+
        <title>AGB Communication - Employee Profile</title>
     </head>
     <body>
